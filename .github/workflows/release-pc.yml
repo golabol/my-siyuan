@@ -54,6 +54,11 @@ jobs:
         with:
           path: siyuan-note
 
+      # Step to clean up previous builds to prevent `gtar` conflicts
+      - name: Cleanup previous builds
+        run: |
+          rm -rf ${{ github.workspace }}/go/pkg/mod
+
       - name: clone origin and apply patches
         run: |
           mkdir -p ${{ github.workspace }}/go
@@ -132,6 +137,14 @@ jobs:
       - name: Building Electron
         run: pnpm run ${{ matrix.config.electron_args }}
         working-directory: ${{ github.workspace }}/siyuan-note/siyuan/app
+
+      # Step to check if release tag already exists
+      - name: Check if tag exists
+        run: |
+          if git rev-parse ${{ github.event.inputs.version }} >/dev/null 2>&1; then
+            echo "Tag already exists. Skipping release creation."
+            exit 1
+          fi
 
       - name: Create Release
         uses: actions/create-release@v1
