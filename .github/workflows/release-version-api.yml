@@ -1,16 +1,23 @@
 name: Generate Version API on Release
 
 on:
-  release:
-    types: [published]
+  # Trigger after 'release-pc.yml' completes
+  workflow_run:
+    workflows: ["release-pc.yml"]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
   contents: write
-  actions: read
+  actions: read 
 
 jobs:
   generate-json:
+    # --- Added Job Condition ---
+    # Only run if the triggering workflow run was successful
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -19,29 +26,30 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Get Release Info
+      - name: Get Latest Release Info via API
         id: release_info
         run: |
-          # Handle manual trigger (workflow_dispatch) where release context is empty
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "Manual trigger detected. Fetching latest release info via API."
-            LATEST_RELEASE_INFO=$(curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              "https://api.github.com/repos/${{ github.repository }}/releases/latest")
-            if echo "$LATEST_RELEASE_INFO" | jq -e '.tag_name' > /dev/null; then
-              echo "tag=$(echo "$LATEST_RELEASE_INFO" | jq -r '.tag_name')" >> $GITHUB_OUTPUT
-              echo "release_url=$(echo "$LATEST_RELEASE_INFO" | jq -r '.html_url')" >> $GITHUB_OUTPUT
-              echo "assets_json=$(echo "$LATEST_RELEASE_INFO" | jq -c '.assets')" >> $GITHUB_OUTPUT
-            else
-              echo "::error::Could not fetch latest release info or no releases found."
-              echo "API Response: $LATEST_RELEASE_INFO"
-              exit 1
-            fi
+          echo "Fetching latest release info via API..."
+          # Use GitHub API to get the latest published release
+          LATEST_RELEASE_INFO=$(curl -s -L \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/latest")
+
+          # Check if API call was successful and found a release tag
+          if echo "$LATEST_RELEASE_INFO" | jq -e '.tag_name' > /dev/null; then
+            TAG_NAME=$(echo "$LATEST_RELEASE_INFO" | jq -r '.tag_name')
+            HTML_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r '.html_url')
+            ASSETS_JSON=$(echo "$LATEST_RELEASE_INFO" | jq -c '.assets')
+            echo "Found latest release tag: $TAG_NAME"
+            echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+            echo "release_url=$HTML_URL" >> $GITHUB_OUTPUT
+            echo "assets_json=$ASSETS_JSON" >> $GITHUB_OUTPUT
           else
-            # Standard release trigger
-            echo "Release trigger detected."
-            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-            echo "release_url=${{ github.event.release.html_url }}" >> $GITHUB_OUTPUT
-            echo "assets_json=$(echo '${{ toJSON(github.event.release.assets) }}' | jq -c .)" >> $GITHUB_OUTPUT
+            echo "::error::Could not fetch latest release info or no releases found."
+            echo "API Response: $LATEST_RELEASE_INFO"
+            exit 1
           fi
         shell: bash
 
@@ -95,14 +103,10 @@ jobs:
              echo "::error::Version tag is empty. Cannot construct JSON."
              exit 1
           fi
-          # Remove 'v' prefix for the 'ver' field
-          version_string="${raw_tag#v}" 
-          # --- Static values ---
-          r_value="wz3zjPO1YohLl14e" 
+          version_string="${raw_tag#v}"
+          r_value="wz3zjPO1YohLl14e"
           bazaar_value="2b3909b84e01bbdabc22607bc4bca79160188cce"
-          # Use the original tag (with 'v') for download URLs
-          install_pkg_url="https://github.com/${{ github.repository }}/releases/download/$raw_tag/" 
-          # --- Construct JSON ---
+          install_pkg_url="https://github.com/${{ github.repository }}/releases/download/$raw_tag/"
           final_json=$(jq -n \
                         --arg ver "$version_string" \
                         --arg release_url "${{ steps.release_info.outputs.release_url }}" \
@@ -121,11 +125,9 @@ jobs:
                           bazaar: $bazaar,
                           announcement: []
                         }')
-          # <<< --- Updated Path --- >>>
           output_dir="apis/siyuan"
-          output_filename="version" # No .json extension as requested
+          output_filename="version" # No .json extension
           output_path="$output_dir/$output_filename"
-          # <<< -------------------- >>>
           mkdir -p "$output_dir"
           echo "$final_json" > "$output_path"
           echo "JSON data saved to $output_path"
@@ -137,8 +139,7 @@ jobs:
         with:
           commit_message: "chore: Update Siyuan version API to ${{ steps.release_info.outputs.tag }}"
           branch: main
-          # The output_file variable now holds 'apis/siyuan/version'
-          file_pattern: ${{ steps.final_json.outputs.output_file }} 
+          file_pattern: ${{ steps.final_json.outputs.output_file }}
           commit_user_name: github-actions[bot]
           commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
           commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
