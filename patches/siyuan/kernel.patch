@@ -24,20 +24,6 @@ index 4dc3cd3d0..8b7b4fa83 100644
      </div>
      <div class="fn__flex-1"></div>
  </div>
-diff --git a/kernel/conf/account.go b/kernel/conf/account.go
-index 5e3b51fb8..d4f4e00de 100644
---- a/kernel/conf/account.go
-+++ b/kernel/conf/account.go
-@@ -23,7 +23,7 @@ type Account struct {
- 
- func NewAccount() *Account {
- 	return &Account{
--		DisplayTitle: true,
--		DisplayVIP:   true,
-+		DisplayTitle: false,
-+		DisplayVIP:   false,
- 	}
- }
 diff --git a/kernel/conf/sync.go b/kernel/conf/sync.go
 index 1f23e9642..9e002cbd7 100644
 --- a/kernel/conf/sync.go
