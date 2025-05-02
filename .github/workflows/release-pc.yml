@@ -37,9 +37,11 @@ jobs:
             goos: "darwin"
             goarch: "arm64"
             suffix: "mac-arm64.dmg"
-          - os: windows-2019
+          - os: windows-latest
+            name: windows build win.exe
             kernel_path: "../app/kernel/SiYuan-Kernel.exe"
-            build_args: "-s -w -H=windowsgui -X github.com/siyuan-note/siyuan/kernel/util.Mode=prod"
+            build_args_prefix: "-s -w -H=windowsgui -X"
+            build_args_suffix: "Mode=prod"
             electron_args: "dist"
             goos: "windows"
             gobin: "bin"
@@ -68,7 +70,7 @@ jobs:
 
       - name: Set up MingGW
         uses: msys2/setup-msys2@v2
-        if: contains( matrix.config.goos, 'windows')
+        if: "contains( matrix.config.goos, 'windows')"
         with:
           install: p7zip mingw-w64-x86_64-lua
 
@@ -86,7 +88,7 @@ jobs:
 
       - name: Set up goversioninfo
         run: go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo && go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo
-        if: contains( matrix.config.goos, 'windows')
+        if: "contains( matrix.config.goos, 'windows')"
         working-directory: ${{ github.workspace }}/siyuan-note/siyuan/kernel
         env:
           GO111MODULE: on
@@ -101,7 +103,7 @@ jobs:
           node-version: 20
 
       - name: Install Node pnpm
-        run: npm install -g ${{ github.event.inputs.packageManager }}
+        run: npm install -g ${{ needs.create_release.outputs.packageManager }}
         working-directory: ${{ github.workspace }}/siyuan-note/siyuan/app
 
       - name: Install Node Dependencies
@@ -114,7 +116,7 @@ jobs:
 
       - name: Generate Icon Resource and Properties/Version Info For Windows
         run: ${{ github.workspace }}\go\${{ matrix.config.gobin }}\goversioninfo -platform-specific=true -icon="resource\icon.ico" -manifest="resource\goversioninfo.exe.manifest"
-        if: contains( matrix.config.goos, 'windows')
+        if: "contains( matrix.config.goos, 'windows')"
         working-directory: ${{ github.workspace }}/siyuan-note/siyuan/kernel
 
       - name: Building Kernel
