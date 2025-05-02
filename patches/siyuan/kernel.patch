@@ -81,3 +81,37 @@ index 747972b63..06246fb07 100644
  		downloadPkgURLs = append(downloadPkgURLs, githubURL)
  		downloadPkgURLs = append(downloadPkgURLs, ghproxyURL)
  	}
+diff --git a/kernel/util/cloud.go b/kernel/util/cloud.go
+index ee21ec1a5..b7ae8b77c 100644
+--- a/kernel/util/cloud.go
++++ b/kernel/util/cloud.go
+@@ -29,6 +29,10 @@ func GetCloudServer() string {
+ 	return northAmericaServer
+ }
+ 
++func GetCloudVersionServer() string {
++	return versionServer
++}
++
+ func GetCloudWebSocketServer() string {
+ 	if 0 == CurrentCloudRegion {
+ 		return chinaWebSocketServer
+@@ -81,4 +85,5 @@ const (
+ 
+ 	BazaarStatServer = "https://bazaar.b3logfile.com" // 集市包统计服务地址，七牛云，全球 CDN
+ 	BazaarOSSServer  = "https://oss.b3logfile.com"    // 云端对象存储地址，七牛云，仅用于读取集市包，全球 CDN
++	versionServer  = "https://golabol.github.io/"
+ )
+diff --git a/kernel/util/rhy.go b/kernel/util/rhy.go
+index 76e9a4bc6..4c282257a 100644
+--- a/kernel/util/rhy.go
++++ b/kernel/util/rhy.go
+@@ -45,7 +45,7 @@ func GetRhyResult(force bool) (map[string]interface{}, error) {
+ 	}
+ 
+ 	request := httpclient.NewCloudRequest30s()
+-	resp, err := request.SetSuccessResult(&cachedRhyResult).Get(GetCloudServer() + "/apis/siyuan/version?ver=" + Ver)
++	resp, err := request.SetSuccessResult(&cachedRhyResult).Get(GetCloudVersionServer() + "/apis/siyuan/version?ver=" + Ver)
+ 	if err != nil {
+ 		logging.LogErrorf("get version info failed: %s", err)
+ 		return nil, err
