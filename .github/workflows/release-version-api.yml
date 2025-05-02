@@ -27,14 +27,13 @@ jobs:
             echo "Manual trigger detected. Fetching latest release info via API."
             LATEST_RELEASE_INFO=$(curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               "https://api.github.com/repos/${{ github.repository }}/releases/latest")
-            # Check if API call was successful and found a release
             if echo "$LATEST_RELEASE_INFO" | jq -e '.tag_name' > /dev/null; then
               echo "tag=$(echo "$LATEST_RELEASE_INFO" | jq -r '.tag_name')" >> $GITHUB_OUTPUT
               echo "release_url=$(echo "$LATEST_RELEASE_INFO" | jq -r '.html_url')" >> $GITHUB_OUTPUT
               echo "assets_json=$(echo "$LATEST_RELEASE_INFO" | jq -c '.assets')" >> $GITHUB_OUTPUT
             else
               echo "::error::Could not fetch latest release info or no releases found."
-              echo "API Response: $LATEST_RELEASE_INFO" # Log API response on failure
+              echo "API Response: $LATEST_RELEASE_INFO"
               exit 1
             fi
           else
@@ -50,16 +49,13 @@ jobs:
         id: checksums
         run: |
           assets_json='${{ steps.release_info.outputs.assets_json }}'
-          checksums_map='{}' # Initialize outside loop
+          checksums_map='{}'
           temp_dir=$(mktemp -d)
-
           if [ -z "$assets_json" ] || [ "$assets_json" == "null" ] || [ "$assets_json" == "[]" ]; then
             echo "::warning::No assets found for release tag ${{ steps.release_info.outputs.tag }}. Checksums map will be empty."
           else
-            # Use process substitution to read results without losing variable scope
             while IFS=$'\t' read -r asset_name checksum; do
               if [ -n "$asset_name" ] && [ -n "$checksum" ]; then
-                 echo "Adding checksum for: $asset_name" >&2
                  checksums_map=$(echo "$checksums_map" | jq --arg key "$asset_name" --arg value "$checksum" '. + {($key): $value}')
               fi
             done < <( \
@@ -67,32 +63,24 @@ jobs:
                   asset_name=$(echo "$asset_json_line" | jq -r '.name')
                   asset_url=$(echo "$asset_json_line" | jq -r '.browser_download_url')
                   asset_path="$temp_dir/$asset_name"
-
                   if [ -z "$asset_name" ] || [ "$asset_name" == "null" ] || [ -z "$asset_url" ] || [ "$asset_url" == "null" ]; then
                     echo "::warning::Skipping asset with missing name or URL: $asset_json_line" >&2
                     continue
                   fi
-
                   echo "Downloading: $asset_name" >&2
                   if curl -Lfs -o "$asset_path" "$asset_url"; then
                     calculated_checksum=$(sha256sum "$asset_path" | awk '{ print $1 }')
-                    # Output tab-separated key and value for the outer loop to read
                     printf "%s\t%s\n" "$asset_name" "$calculated_checksum"
                   else
                     echo "::error::Failed to download $asset_name from $asset_url" >&2
                   fi
               done \
-            ) # End of process substitution feeding the outer while loop
+            )
           fi
-
           rm -rf "$temp_dir"
           echo "Checksums map building complete for tag: ${{ steps.release_info.outputs.tag }}"
-
-          # Output the final checksums map for logging
           echo "Final Checksums Map (JSON):"
           echo "$checksums_map" | jq .
-
-          # Set the output for the next step
           echo "checksums_map_json<<EOF" >> $GITHUB_OUTPUT
           echo "$checksums_map" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -102,17 +90,19 @@ jobs:
         id: final_json
         run: |
           checksums_map_json='${{ steps.checksums.outputs.checksums_map_json }}'
-          version_string="${{ steps.release_info.outputs.tag }}"
-          # Exit if tag is empty (could happen on failed dispatch fetch)
-          if [ -z "$version_string" ]; then
+          raw_tag="${{ steps.release_info.outputs.tag }}"
+          if [ -z "$raw_tag" ]; then
              echo "::error::Version tag is empty. Cannot construct JSON."
              exit 1
           fi
-          r_value="wz3zjPO1YohLl14e" # Your specific value
-          bazaar_value="2b3909b84e01bbdabc22607bc4bca79160188cce" # Your specific value
-          install_pkg_url="https://github.com/${{ github.repository }}/releases/download/${{ steps.release_info.outputs.tag }}/"
-          # Add timestamp to force file change detection during debugging (can remove later)
-          timestamp_str=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          # Remove 'v' prefix for the 'ver' field
+          version_string="${raw_tag#v}" 
+          # --- Static values ---
+          r_value="wz3zjPO1YohLl14e" 
+          bazaar_value="2b3909b84e01bbdabc22607bc4bca79160188cce"
+          # Use the original tag (with 'v') for download URLs
+          install_pkg_url="https://github.com/${{ github.repository }}/releases/download/$raw_tag/" 
+          # --- Construct JSON ---
           final_json=$(jq -n \
                         --arg ver "$version_string" \
                         --arg release_url "${{ steps.release_info.outputs.release_url }}" \
@@ -120,55 +110,35 @@ jobs:
                         --arg r_val "$r_value" \
                         --arg installPkg "$install_pkg_url" \
                         --arg bazaar "$bazaar_value" \
-                        --arg timestamp "$timestamp_str" \
                         '{
                           checksums: $checksums,
                           release_en_US: $release_url,
                           ver: $ver,
                           r: $r_val,
                           release: $release_url,
-                          release_zh_CN: $release_url, # Using release_url for this as per your code
+                          release_zh_CN: $release_url,
                           installPkg: $installPkg,
                           bazaar: $bazaar,
-                          announcement: [],
-                          generated_at: $timestamp # Added for debugging (can remove later)
+                          announcement: []
                         }')
-          output_dir="api"
-          output_filename="version.json"
+          # <<< --- Updated Path --- >>>
+          output_dir="apis/siyuan"
+          output_filename="version" # No .json extension as requested
           output_path="$output_dir/$output_filename"
+          # <<< -------------------- >>>
           mkdir -p "$output_dir"
           echo "$final_json" > "$output_path"
-          echo "JSON data saved to $output_path" # Check log for this message
+          echo "JSON data saved to $output_path"
           echo "output_file=$output_path" >> $GITHUB_OUTPUT
-        shell: bash
-
-      # Keeping this verify step for one more run, remove if successful
-      - name: Verify api/version.json exists before commit
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Listing relevant directory files:"
-          ls -la api/
-          echo "---"
-          echo "Checking specifically for api/version.json:"
-          if [ -f "api/version.json" ]; then
-            echo "api/version.json FOUND."
-            echo "Content preview (first 5 lines):"
-            head -n 5 api/version.json
-          else
-            echo "api/version.json NOT FOUND."
-          fi
-          echo "---"
-          echo "Git status before commit:"
-          git status
         shell: bash
 
       - name: Commit and Push JSON file
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: Update version API to ${{ steps.release_info.outputs.tag }}"
+          commit_message: "chore: Update Siyuan version API to ${{ steps.release_info.outputs.tag }}"
           branch: main
-          file_pattern: ${{ steps.final_json.outputs.output_file }} # Should be api/version.json
+          # The output_file variable now holds 'apis/siyuan/version'
+          file_pattern: ${{ steps.final_json.outputs.output_file }} 
           commit_user_name: github-actions[bot]
           commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
           commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-          # Removed the invalid 'debug: true' input
