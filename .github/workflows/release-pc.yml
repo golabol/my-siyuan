@@ -103,7 +103,7 @@ jobs:
           node-version: 20
 
       - name: Install Node pnpm
-        run: npm install -g ${{ needs.create_release.outputs.packageManager }}
+        run: npm install -g ${{ github.event.inputs.packageManager }}
         working-directory: ${{ github.workspace }}/siyuan-note/siyuan/app
 
       - name: Install Node Dependencies
