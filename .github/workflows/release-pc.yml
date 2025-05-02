@@ -122,14 +122,7 @@ jobs:
         working-directory: ${{ github.workspace }}/siyuan-note/siyuan/kernel
 
       - name: Building Kernel
-        run: |
-          if [[ "${{ matrix.config.goos }}" == "windows" ]]; then
-            BUILD_ARGS="${{ matrix.config.build_args_prefix }} github.com/siyuan-note/siyuan/kernel/util.${{ matrix.config.build_args_suffix }}"
-          else
-            BUILD_ARGS="${{ matrix.config.build_args }}"
-          fi
-          echo "Using Build Args: $BUILD_ARGS"
-          go build --tags fts5 -o "${{ matrix.config.kernel_path }}" -v -ldflags "$BUILD_ARGS"
+        run: go build --tags fts5 -o "${{ matrix.config.kernel_path }}" -v -ldflags "${{ matrix.config.build_args }}"
         working-directory: ${{ github.workspace }}/siyuan-note/siyuan/kernel
         env:
           GO111MODULE: on
