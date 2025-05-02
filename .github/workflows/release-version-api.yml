@@ -25,7 +25,7 @@ jobs:
           # Handle manual trigger (workflow_dispatch) where release context is empty
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "Manual trigger detected. Fetching latest release info via API."
-            LATEST_RELEASE_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            LATEST_RELEASE_INFO=$(curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               "https://api.github.com/repos/${{ github.repository }}/releases/latest")
             # Check if API call was successful and found a release
             if echo "$LATEST_RELEASE_INFO" | jq -e '.tag_name' > /dev/null; then
@@ -34,6 +34,7 @@ jobs:
               echo "assets_json=$(echo "$LATEST_RELEASE_INFO" | jq -c '.assets')" >> $GITHUB_OUTPUT
             else
               echo "::error::Could not fetch latest release info or no releases found."
+              echo "API Response: $LATEST_RELEASE_INFO" # Log API response on failure
               exit 1
             fi
           else
@@ -49,33 +50,49 @@ jobs:
         id: checksums
         run: |
           assets_json='${{ steps.release_info.outputs.assets_json }}'
-          # Handle case where assets_json might be empty or null from workflow_dispatch fallback
+          checksums_map='{}' # Initialize outside loop
+          temp_dir=$(mktemp -d)
+
           if [ -z "$assets_json" ] || [ "$assets_json" == "null" ] || [ "$assets_json" == "[]" ]; then
             echo "::warning::No assets found for release tag ${{ steps.release_info.outputs.tag }}. Checksums map will be empty."
-            checksums_map='{}'
           else
-            checksums_map='{}'
-            temp_dir=$(mktemp -d)
-            echo "$assets_json" | jq -c '.[]' | while IFS= read -r asset_json_line; do
-              asset_name=$(echo "$asset_json_line" | jq -r '.name')
-              # Use browser_download_url which should be present for both event types
-              asset_url=$(echo "$asset_json_line" | jq -r '.browser_download_url') 
-              asset_path="$temp_dir/$asset_name"
-              if [ -z "$asset_name" ] || [ "$asset_name" == "null" ] || [ -z "$asset_url" ] || [ "$asset_url" == "null" ]; then
-                echo "::warning::Skipping asset with missing name or URL: $asset_json_line"
-                continue
+            # Use process substitution to read results without losing variable scope
+            while IFS=$'\t' read -r asset_name checksum; do
+              if [ -n "$asset_name" ] && [ -n "$checksum" ]; then
+                 echo "Adding checksum for: $asset_name" >&2
+                 checksums_map=$(echo "$checksums_map" | jq --arg key "$asset_name" --arg value "$checksum" '. + {($key): $value}')
               fi
-              echo "Downloading: $asset_name" # Shorten log message
-              if curl -Lfs -o "$asset_path" "$asset_url"; then
-                checksum=$(sha256sum "$asset_path" | awk '{ print $1 }')
-                checksums_map=$(echo "$checksums_map" | jq --arg key "$asset_name" --arg value "$checksum" '. + {($key): $value}')
-              else
-                echo "::error::Failed to download $asset_name from $asset_url"
-              fi
-            done
-            rm -rf "$temp_dir"
+            done < <( \
+              echo "$assets_json" | jq -c '.[]' | while IFS= read -r asset_json_line; do
+                  asset_name=$(echo "$asset_json_line" | jq -r '.name')
+                  asset_url=$(echo "$asset_json_line" | jq -r '.browser_download_url')
+                  asset_path="$temp_dir/$asset_name"
+
+                  if [ -z "$asset_name" ] || [ "$asset_name" == "null" ] || [ -z "$asset_url" ] || [ "$asset_url" == "null" ]; then
+                    echo "::warning::Skipping asset with missing name or URL: $asset_json_line" >&2
+                    continue
+                  fi
+
+                  echo "Downloading: $asset_name" >&2
+                  if curl -Lfs -o "$asset_path" "$asset_url"; then
+                    calculated_checksum=$(sha256sum "$asset_path" | awk '{ print $1 }')
+                    # Output tab-separated key and value for the outer loop to read
+                    printf "%s\t%s\n" "$asset_name" "$calculated_checksum"
+                  else
+                    echo "::error::Failed to download $asset_name from $asset_url" >&2
+                  fi
+              done \
+            ) # End of process substitution feeding the outer while loop
           fi
-          echo "Checksums map built for tag: ${{ steps.release_info.outputs.tag }}"
+
+          rm -rf "$temp_dir"
+          echo "Checksums map building complete for tag: ${{ steps.release_info.outputs.tag }}"
+
+          # Output the final checksums map for logging
+          echo "Final Checksums Map (JSON):"
+          echo "$checksums_map" | jq .
+
+          # Set the output for the next step
           echo "checksums_map_json<<EOF" >> $GITHUB_OUTPUT
           echo "$checksums_map" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -94,7 +111,7 @@ jobs:
           r_value="wz3zjPO1YohLl14e" # Your specific value
           bazaar_value="2b3909b84e01bbdabc22607bc4bca79160188cce" # Your specific value
           install_pkg_url="https://github.com/${{ github.repository }}/releases/download/${{ steps.release_info.outputs.tag }}/"
-          # Add timestamp to force file change detection during debugging
+          # Add timestamp to force file change detection during debugging (can remove later)
           timestamp_str=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           final_json=$(jq -n \
                         --arg ver "$version_string" \
@@ -114,7 +131,7 @@ jobs:
                           installPkg: $installPkg,
                           bazaar: $bazaar,
                           announcement: [],
-                          generated_at: $timestamp # Added for debugging
+                          generated_at: $timestamp # Added for debugging (can remove later)
                         }')
           output_dir="api"
           output_filename="version.json"
@@ -125,6 +142,7 @@ jobs:
           echo "output_file=$output_path" >> $GITHUB_OUTPUT
         shell: bash
 
+      # Keeping this verify step for one more run, remove if successful
       - name: Verify api/version.json exists before commit
         run: |
           echo "Current directory: $(pwd)"
@@ -141,18 +159,16 @@ jobs:
           fi
           echo "---"
           echo "Git status before commit:"
-          # Ensure git commands run correctly even if CWD changes
           git status
         shell: bash
 
       - name: Commit and Push JSON file
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: Update version API to ${{ steps.release_info.outputs.tag }} [debug]"
+          commit_message: "chore: Update version API to ${{ steps.release_info.outputs.tag }}"
           branch: main
           file_pattern: ${{ steps.final_json.outputs.output_file }} # Should be api/version.json
           commit_user_name: github-actions[bot]
           commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
           commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-          # <<< --- ADDED DEBUG FLAG --- >>>
-          debug: true
+          # Removed the invalid 'debug: true' input
