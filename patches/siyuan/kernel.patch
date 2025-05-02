@@ -1,3 +1,29 @@
+diff --git a/app/appearance/langs/en_US.json b/app/appearance/langs/en_US.json
+index 240ec4032..9f93de009 100644
+--- a/app/appearance/langs/en_US.json
++++ b/app/appearance/langs/en_US.json
+@@ -1196,7 +1196,7 @@
+   "about18": "When using a non-loopback address (<code class=\"fn__code\">127.0.0.1</code>/<code class=\"fn__code\">[::1]</code>) please set the Access authorization code first",
+   "checkUpdate": "Check update",
+   "currentVer": "Current version",
+-  "downloadLatestVer": "<a href=\"https://b3log.org/siyuan/en/download.html\", target=\"_blank\">Download the latest version</a>",
++  "downloadLatestVer": "<a href=\"https://github.com/golabol/my-siyuan/releases/latest\", target=\"_blank\">Download the latest version</a>",
+   "themeLight": "Light",
+   "themeDark": "Dark",
+   "themeOS": "Follow the system",
+diff --git a/app/electron/error.html b/app/electron/error.html
+index 4dc3cd3d0..8b7b4fa83 100644
+--- a/app/electron/error.html
++++ b/app/electron/error.html
+@@ -150,7 +150,7 @@
+     </div>
+     <div class="feedback">
+         <span><a href="https://liuyun.io/article/1686530886208" target="_blank">Feedback and support</a></span>
+-        <span><a href="https://b3log.org/siyuan/en/download.html" target="_blank">Download the latest version</a></span>
++        <span><a href="https://github.com/golabol/my-siyuan/releases/latest" target="_blank">Download the latest version</a></span>
+     </div>
+     <div class="fn__flex-1"></div>
+ </div>
 diff --git a/kernel/conf/account.go b/kernel/conf/account.go
 index 5e3b51fb8..d4f4e00de 100644
 --- a/kernel/conf/account.go
