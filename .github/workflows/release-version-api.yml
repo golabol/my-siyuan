@@ -1,0 +1,99 @@
+name: Generate Version API on Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  generate-json:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Get Release Info
+        id: release_info
+        run: |
+          echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          echo "release_url=${{ github.event.release.html_url }}" >> $GITHUB_OUTPUT
+          echo "assets_json=$(echo '${{ toJSON(github.event.release.assets) }}' | jq -c .)" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Calculate Checksums and Build JSON Map
+        id: checksums
+        run: |
+          assets_json='${{ steps.release_info.outputs.assets_json }}'
+          checksums_map='{}'
+          temp_dir=$(mktemp -d)
+          echo "$assets_json" | jq -c '.[]' | while IFS= read -r asset_json_line; do
+            asset_name=$(echo "$asset_json_line" | jq -r '.name')
+            asset_url=$(echo "$asset_json_line" | jq -r '.browser_download_url')
+            asset_path="$temp_dir/$asset_name"
+            if [ -z "$asset_name" ] || [ "$asset_name" == "null" ] || [ -z "$asset_url" ] || [ "$asset_url" == "null" ]; then
+              echo "::warning::Skipping asset with missing name or URL: $asset_json_line"
+              continue
+            fi
+            if curl -Lfs -o "$asset_path" "$asset_url"; then
+              checksum=$(sha256sum "$asset_path" | awk '{ print $1 }')
+              checksums_map=$(echo "$checksums_map" | jq --arg key "$asset_name" --arg value "$checksum" '. + {($key): $value}')
+            else
+              echo "::error::Failed to download $asset_name from $asset_url"
+            fi
+          done
+          rm -rf "$temp_dir"
+          echo "checksums_map_json<<EOF" >> $GITHUB_OUTPUT
+          echo "$checksums_map" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Construct Final JSON Object
+        id: final_json
+        run: |
+          checksums_map_json='${{ steps.checksums.outputs.checksums_map_json }}'
+          version_string="${{ steps.release_info.outputs.tag }}"
+          r_value="wz3zjPO1YohLl14e"
+          bazaar_value="2b3909b84e01bbdabc22607bc4bca79160188cce"
+          install_pkg_url="https://github.com/${{ github.repository }}/releases/download/${{ steps.release_info.outputs.tag }}/"
+          final_json=$(jq -n \
+                        --arg ver "$version_string" \
+                        --arg release_url "${{ steps.release_info.outputs.release_url }}" \
+                        --argjson checksums "$checksums_map_json" \
+                        --arg r_val "$r_value" \
+                        --arg installPkg "$install_pkg_url" \
+                        --arg bazaar "$bazaar_value" \
+                        '{
+                          checksums: $checksums,
+                          release_en_US: $release_url,
+                          ver: $ver,
+                          r: $r_val,
+                          release: $release_url,
+                          release_zh_CN: $release_url,
+                          installPkg: $installPkg,
+                          bazaar: $bazaar,
+                          announcement: []
+                        }')
+          output_dir="api"
+          output_filename="version.json"
+          output_path="$output_dir/$output_filename"
+          mkdir -p "$output_dir"
+          echo "$final_json" > "$output_path"
+          echo "output_file=$output_path" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Commit and Push JSON file
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: Update version API to ${{ steps.release_info.outputs.tag }}"
+          branch: main
+          file_pattern: ${{ steps.final_json.outputs.output_file }}
+          commit_user_name: github-actions[bot]
+          commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
