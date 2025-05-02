@@ -54,11 +54,6 @@ jobs:
         with:
           path: siyuan-note
 
-      # Step to clean up previous builds to prevent `gtar` conflicts
-      - name: Cleanup previous builds
-        run: |
-          rm -rf ${{ github.workspace }}/go/pkg/mod
-
       - name: clone origin and apply patches
         run: |
           mkdir -p ${{ github.workspace }}/go
