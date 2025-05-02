@@ -21,7 +21,7 @@ index 488cb9e5701adc964635376373202516656b1f9a..4e2a457fe7ff2dec817c2e0ae9de610d
 -		GenerateConflictDoc: false,
 -		Provider:            ProviderSiYuan,
 +		GenerateConflictDoc: true,
-+		Provider:            ProviderS3,
++		Provider:            ProviderWebDAV,
  		Interval:            30,
  	}
  }
@@ -47,9 +47,8 @@ index ebd1002acf907e4afb3524fe5adcf672a850646b..1df2f4761587468cadf8f6d435738367
  		Icon:                "material",
  		CodeBlockThemeLight: "github",
  		CodeBlockThemeDark:  "base16/dracula",
--		Lang:                "en_US",
+ 		Lang:                "en_US",
 -		CloseButtonBehavior: 0,
-+		Lang:                "zh_CN",
 +		CloseButtonBehavior: 1,
  		HideStatusBar:       false,
  	}
