@@ -15,7 +15,6 @@ permissions:
 jobs:
   generate_version_json:
     # Run only after all 'build' matrix jobs succeed
-    needs: build
     runs-on: ubuntu-latest
     steps:
       # Checkout code again in this new job environment
@@ -197,4 +196,3 @@ jobs:
           commit_user_name: github-actions[bot]
           commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
           commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-          
