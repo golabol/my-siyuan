@@ -1,9 +1,9 @@
 {
   "checksums": {
-    "siyuan-v3.1.28-linux.tar.gz": "aa21a656f3612f17d7650be853742cb04f9a2feb0083f2b8567c22b0fc1af926",
-    "siyuan-v3.1.28-mac-arm64.dmg": "69ce63a565c6bc9951dfd0c7eb495a98e30934c89c0526c8acdc1cd543d67783",
-    "siyuan-v3.1.28-mac.dmg": "b14460a550f87b6be3b8214ae124162771faf5a21e4ac233a1facb9aa863b2a4",
-    "siyuan-v3.1.28-win.exe": "09a39b2090a9a5ff0b8d669f88b2fad8ebb334f6179326de3c251bd6f91bcf2b"
+    "siyuan-v3.1.28-linux.tar.gz": "fd37226f04b40b2e3aec0d0fd50bd52059d59d825e15a61a73d7570f6fdeacc4",
+    "siyuan-v3.1.28-mac-arm64.dmg": "93c23e873b4cf791898e7abd3f9e8d629c450a0d13b6c23ce8e3eea1d85caeea",
+    "siyuan-v3.1.28-mac.dmg": "9e838e9da4aa7ec2d70a143e0dc021f319b52e6c9a9dd2cc8668d727867dede1",
+    "siyuan-v3.1.28-win.exe": "e61702141bff5ffae4894984c1e4a245f3755a8ec40077a3b48d88dd93aef90c"
   },
   "release_en_US": "https://github.com/golabol/my-siyuan/releases/tag/v3.1.28",
   "ver": "3.1.28",
