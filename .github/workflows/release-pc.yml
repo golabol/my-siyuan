@@ -315,16 +315,22 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git pull --rebase origin main # Pull latest changes and re-apply local changes on top
+          # --- Add this line ---
+          git add ${{ steps.final_json.outputs.output_file }}
+          # --------------------
+          # Now pull/rebase with the change staged
+          git pull --rebase origin main
         shell: bash
 
-      # Commit the generated file (now on top of the latest main)
+      # Commit and Push JSON file (should now work)
       - name: Commit and Push JSON file
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
+          # ... (rest of the parameters remain the same) ...
           commit_message: "chore: Update Siyuan version API to ${{ steps.release_info.outputs.tag }}"
           branch: main
           file_pattern: ${{ steps.final_json.outputs.output_file }}
           commit_user_name: github-actions[bot]
           commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
           commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          
