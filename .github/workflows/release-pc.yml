@@ -311,7 +311,14 @@ jobs:
           echo "output_file=$output_path" >> $GITHUB_OUTPUT
         shell: bash
 
-      # Commit the generated file
+      - name: Pull latest changes from main
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin main # Pull latest changes and re-apply local changes on top
+        shell: bash
+
+      # Commit the generated file (now on top of the latest main)
       - name: Commit and Push JSON file
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
