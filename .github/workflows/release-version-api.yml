@@ -130,9 +130,9 @@ jobs:
               if [ -n "$original_asset_name" ] && [ -n "$checksum" ]; then
                  # Modify the asset name to remove '-v' before version for the map key
                  map_key_name=$(echo "$original_asset_name" | sed 's/-v\([0-9]\)/-\1/')
-                 echo "Original Name: '$original_asset_name', Map Key Name: '$map_key_name'"
+                 echo "Original Name: '$original_asset_name', Map Key Name: '$original_asset_name'"
                  # Add the key-value pair to the JSON map
-                 checksums_map=$(echo "$checksums_map" | jq --arg key "$map_key_name" --arg value "$checksum" '. + {($key): $value}')
+                 checksums_map=$(echo "$checksums_map" | jq --arg key "$original_asset_name" --arg value "$checksum" '. + {($key): $value}')
               else
                  echo "::warning::Skipping line with empty original name or checksum."
               fi

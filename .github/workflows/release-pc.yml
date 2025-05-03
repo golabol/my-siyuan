@@ -192,62 +192,57 @@ jobs:
           fi
         shell: bash
 
-      # Use the corrected checksum script
+      # Download assets, calculate checksums, and build the checksum map
       - name: Calculate Checksums and Build JSON Map
         id: checksums
         run: |
           assets_json='${{ steps.release_info.outputs.assets_json }}'
           checksums_map='{}'
           temp_dir=$(mktemp -d)
-          echo "Using temp dir: $temp_dir" # Added for debugging visibility
+          echo "Using temp dir for downloads: $temp_dir"
 
           if [ -z "$assets_json" ] || [ "$assets_json" == "null" ] || [ "$assets_json" == "[]" ]; then
             echo "::warning::No assets found for release tag ${{ steps.release_info.outputs.tag }}. Checksums map will be empty."
           else
-            # Loop through calculated checksums
+            # Process each asset: download, calculate checksum, store in map
             while IFS=$'\t' read -r original_asset_name checksum; do
               if [ -n "$original_asset_name" ] && [ -n "$checksum" ]; then
-                 # --- MODIFICATION START ---
-                 # Remove 'v' only if it's followed by a digit (common version pattern)
-                 # Example: siyuan-v3.1.28-win.exe -> siyuan-3.1.28-win.exe
-                 # Example: other-v-file.txt -> other-v-file.txt (no change)
-                 # Example: versionless.zip -> versionless.zip (no change)
+                 # Modify the asset name to remove '-v' before version for the map key
                  map_key_name=$(echo "$original_asset_name" | sed 's/-v\([0-9]\)/-\1/')
-                 echo "Original Name: '$original_asset_name', Map Key Name: '$map_key_name'" # Added for debugging
-                 # --- MODIFICATION END ---
-
-                 # Use the modified name as the key
-                 checksums_map=$(echo "$checksums_map" | jq --arg key "$map_key_name" --arg value "$checksum" '. + {($key): $value}')
+                 echo "Original Name: '$original_asset_name', Map Key Name: '$original_asset_name'"
+                 # Add the key-value pair to the JSON map
+                 checksums_map=$(echo "$checksums_map" | jq --arg key "$original_asset_name" --arg value "$checksum" '. + {($key): $value}')
               else
-                 echo "::warning::Skipping line with empty original name or checksum." # Added detail
+                 echo "::warning::Skipping line with empty original name or checksum."
               fi
             done < <( \
-              # Inner loop: Download assets and calculate checksums
+              # Subshell to download assets and print name/checksum pairs
               echo "$assets_json" | jq -c '.[]' | while IFS= read -r asset_json_line; do
-                  # Extract original name and URL
+                  # Extract asset details
                   asset_name=$(echo "$asset_json_line" | jq -r '.name')
                   asset_url=$(echo "$asset_json_line" | jq -r '.browser_download_url')
                   asset_path="$temp_dir/$asset_name"
 
+                  # Skip if name or URL is missing
                   if [ -z "$asset_name" ] || [ "$asset_name" == "null" ] || [ -z "$asset_url" ] || [ "$asset_url" == "null" ]; then
                     echo "::warning::Skipping asset with missing name or URL: $asset_json_line" >&2
                     continue
                   fi
 
-                  echo "Processing asset: $asset_name" >&2 # Changed from Downloading
-                  # Use '-s' for silent, '-S' to show errors, '-f' to fail silently on server errors, '-L' follow redirects, '-o' output file
+                  echo "Processing asset: $asset_name" >&2
+                  # Download the asset
                   if curl -fsSL -o "$asset_path" "$asset_url"; then
                     echo "Downloaded: $asset_name to $asset_path" >&2
-                    # Calculate checksum
+                    # Calculate SHA256 checksum
                     calculated_checksum=$(sha256sum "$asset_path" | awk '{ print $1 }')
                     if [ -z "$calculated_checksum" ]; then
                        echo "::error::Failed to calculate checksum for $asset_name" >&2
                     else
-                       # Output original name and checksum, tab-separated
+                       # Output the original name and checksum, tab-separated for the outer loop
                        printf "%s\t%s\n" "$asset_name" "$calculated_checksum"
                     fi
                   else
-                    # Check curl exit code for more info if needed
+                    # Handle download failure
                     curl_exit_code=$?
                     echo "::error::Failed to download $asset_name from $asset_url (curl exit code: $curl_exit_code)" >&2
                   fi
@@ -255,35 +250,42 @@ jobs:
             )
           fi
 
-          # Cleanup
-          echo "Removing temp dir: $temp_dir" # Added for debugging visibility
+          # Clean up the temporary directory
+          echo "Removing temp dir: $temp_dir"
           rm -rf "$temp_dir"
 
           echo "Checksums map building complete for tag: ${{ steps.release_info.outputs.tag }}"
           echo "Final Checksums Map (JSON):"
-          # Pretty print the final map for logs
-          echo "$checksums_map" | jq .
+          echo "$checksums_map" | jq . # Pretty-print for logs
 
-          # Set the output variable for subsequent steps
+          # Output the final map as a single-line JSON string
           echo "checksums_map_json<<EOF" >> $GITHUB_OUTPUT
           echo "$checksums_map" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
         shell: bash
 
-      # Construct the JSON using the tag (removing 'v' prefix)
+      # Construct the final JSON object for the version API file
       - name: Construct Final JSON Object
         id: final_json
         run: |
           checksums_map_json='${{ steps.checksums.outputs.checksums_map_json }}'
+          # Use the tag confirmed by the API call
           raw_tag="${{ steps.release_info.outputs.tag }}"
+
           if [ -z "$raw_tag" ]; then
-             echo "::error::Version tag is empty. Cannot construct JSON."
+             echo "::error::Version tag is empty after API check. Cannot construct JSON."
              exit 1
           fi
+
+          # Remove 'v' prefix for the 'ver' field
           version_string="${raw_tag#v}"
+          # Static values (replace if necessary)
           r_value="wz3zjPO1YohLl14e"
           bazaar_value="2b3909b84e01bbdabc22607bc4bca79160188cce"
+          # Construct download base URL using the confirmed tag
           install_pkg_url="https://github.com/${{ github.repository }}/releases/download/$raw_tag/"
+
+          # Build the final JSON using jq
           final_json=$(jq -n \
                         --arg ver "$version_string" \
                         --arg release_url "${{ steps.release_info.outputs.release_url }}" \
@@ -301,25 +303,74 @@ jobs:
                           installPkg: $installPkg,
                           bazaar: $bazaar,
                           announcement: []
-                        }')
+                        }') # Assuming announcement is always empty
+
+          # Define output path and ensure directory exists
           output_dir="apis/siyuan"
-          output_filename="version" # No .json extension
+          output_filename="version" # File name without extension
           output_path="$output_dir/$output_filename"
           mkdir -p "$output_dir"
+
+          # Write the JSON to the file
           echo "$final_json" > "$output_path"
           echo "JSON data saved to $output_path"
+
+          # Output the path for subsequent steps
           echo "output_file=$output_path" >> $GITHUB_OUTPUT
         shell: bash
 
+      # Temporarily stash local changes (the generated file)
+      - name: Stash local changes before pulling
+        id: stash
+        run: |
+          # Check if there are any staged or unstaged changes
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            echo "Changes detected, stashing..."
+            # Stash including untracked files, with a message
+            git stash push -u -m "temp-version-update-${{ github.run_id }}"
+            # Record that stashing occurred
+            echo "stashed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes to stash."
+            echo "stashed=false" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      # Pull latest changes from the target branch (main), rebasing local commits
       - name: Pull latest changes from main
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          # --- Add this line ---
-          git add ${{ steps.final_json.outputs.output_file }}
-          # --------------------
-          # Now pull/rebase with the change staged
-          git pull --rebase origin main
+          echo "Pulling and rebasing onto origin/main..."
+          # Attempt the pull/rebase
+          if ! git pull --rebase origin main; then
+            echo "::error::'git pull --rebase' failed. Trying to restore stash to inspect conflicts."
+            # Attempt to restore stash if needed, even on pull failure
+            if [ "${{ steps.stash.outputs.stashed }}" == "true" ]; then
+               git stash pop || echo "::warning::Failed to pop stash after pull failure."
+               echo "::warning::Inspect the state manually. Conflicts may exist."
+               git status
+            fi
+            exit 1 # Exit after pull failure
+          fi
+          echo "Pull/rebase successful."
+        shell: bash
+
+      # Restore the stashed changes (the generated file) after pulling
+      - name: Restore stashed changes
+        # Only run if something was actually stashed
+        if: steps.stash.outputs.stashed == 'true'
+        run: |
+          echo "Popping stash..."
+          # Try to pop the stash; fail if conflicts occur
+          if ! git stash pop; then
+             echo "::error::'git stash pop' failed. This likely indicates a conflict between pulled changes and the generated file."
+             echo "::error::Resolve conflicts manually in the repository."
+             echo "Current Git Status:"
+             git status
+             exit 1 # Exit if stash pop fails (indicates conflict)
+          fi
+          echo "Stash pop successful."
         shell: bash
 
       # Commit and Push JSON file (should now work)
@@ -333,4 +384,3 @@ jobs:
           commit_user_name: github-actions[bot]
           commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
           commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-          
