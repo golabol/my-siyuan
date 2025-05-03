@@ -52,12 +52,15 @@ index 52c910688..ac65790b4 100644
  	}
  }
 diff --git a/kernel/model/updater.go b/kernel/model/updater.go
-index 747972b63..06246fb07 100644
+index 747972b63..bfbb43799 100644
 --- a/kernel/model/updater.go
 +++ b/kernel/model/updater.go
-@@ -140,18 +140,18 @@ func getUpdatePkg() (downloadPkgURLs []string, checksum string, err error) {
+@@ -138,20 +138,20 @@ func getUpdatePkg() (downloadPkgURLs []string, checksum string, err error) {
+ 			suffix = "mac.dmg"
+ 		}
  	}
- 	pkg := "siyuan-" + ver + "-" + suffix
+-	pkg := "siyuan-" + ver + "-" + suffix
++	pkg := "siyuan-v" + ver + "-" + suffix
  
 -	b3logURL := "https://release.b3log.org/siyuan/" + pkg
 -	liuyunURL := "https://release.liuyun.io/siyuan/" + pkg
