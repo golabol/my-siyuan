@@ -28,7 +28,8 @@ jobs:
       - name: Get Release Info by Tag
         id: release_info
         run: |
-          TAG_NAME="${{ github.event.inputs.version }}" # Use input version
+          LATEST_RELEASE_INFO=$(curl ... "https://api.github.com/repos/${{ github.repository }}/releases/latest")
+          TAG_NAME=$(echo "$LATEST_RELEASE_INFO" | jq -r '.tag_name')
           echo "Fetching release info for tag: $TAG_NAME"
           # Use GitHub API to get release details *for this specific tag*
           RELEASE_INFO=$(curl -s -L \
