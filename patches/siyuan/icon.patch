@@ -1,8 +1,8 @@
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..ff96d6fa3 100644
+index df3f8baf7..e6e2eadd6 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
-@@ -1,276 +1,452 @@
+@@ -1,276 +1,468 @@
 -import {getRandom, isMobile} from "../util/functions";
 -import {fetchPost} from "../util/fetch";
 -import {Constants} from "../constants";
@@ -47,6 +47,22 @@ index df3f8baf7..ff96d6fa3 100644
 +      }>;
 +    }>;
 +  }>;
++}
++
++// Add debounce utility
++function debounce<T extends (...args: any[]) => any>(
++  func: T,
++  wait: number
++): (...args: Parameters<T>) => void {
++  let timeout: number;
++  return function executedFunction(...args: Parameters<T>) {
++    const later = () => {
++      clearTimeout(timeout);
++      func(...args);
++    };
++    clearTimeout(timeout);
++    timeout = setTimeout(later, wait);
++  };
 +}
 +
  export const getRandomEmoji = () => {
@@ -236,9 +252,6 @@ index df3f8baf7..ff96d6fa3 100644
 +      }" class="emojis__content"${
 +        index > 1 ? ' data-index="' + index + '"' : ""
 +      }>`;
-+    }
-+    if (category.items.length === 0 && index === 0 && !key) {
-+      html += `<div style="margin-left: 4px">${window.siyuan.languages.setEmojiTip}</div>`;
      }
 -    let maxCount = 0;
 -    let keyHTML = "";
@@ -246,6 +259,9 @@ index df3f8baf7..ff96d6fa3 100644
 -    window.siyuan.emojis.forEach((category, index) => {
 -        if (!key) {
 -            html += `<div class="emojis__title" data-type="${index + 1}">${getEmojiTitle(index)}</div><div style="min-height:${index === 0 ? "30px" : "300px"}" class="emojis__content"${index > 1 ? ' data-index="' + index + '"' : ""}>`;
++    if (category.items.length === 0 && index === 0 && !key) {
++      html += `<div style="margin-left: 4px">${window.siyuan.languages.setEmojiTip}</div>`;
++    }
 +
 +    category.items.forEach((emoji) => {
 +      if (key) {
@@ -681,7 +697,7 @@ index df3f8baf7..ff96d6fa3 100644
      </div>
      <div class="emojis__tabbody">
          <div class="fn__none" data-type="tab-emoji">
-@@ -279,481 +455,850 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -279,481 +471,852 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="fn__space"></span>
                  <label class="b3-form__icon fn__flex-1" style="overflow:initial;">
                      <svg class="b3-form__icon-icon"><use xlink:href="#iconSearch"></use></svg>
@@ -998,6 +1014,36 @@ index df3f8baf7..ff96d6fa3 100644
 +    '[data-type="tab-emoji"] .b3-text-field'
 +  ) as HTMLInputElement;
 +  const emojisContentElement = dialog.element.querySelector(".emojis__panel");
++
++  // Modify the input event handler in openEmojiPanel to use debounce
++  const handleEmojiSearch = debounce(async (value: string) => {
++    emojisContentElement.innerHTML = await filterEmoji(value);
++    if (value) {
++      emojisContentElement.nextElementSibling.classList.add("fn__none");
++    } else {
++      emojisContentElement.nextElementSibling.classList.remove("fn__none");
++    }
++    emojisContentElement.scrollTop = 0;
++    dialog.element
++      .querySelector(".emojis__item")
++      ?.classList.add("emojis__item--current");
++    if (value === "") {
++      lazyLoadEmoji(dialog.element);
++    }
++    lazyLoadEmojiImg(dialog.element);
++  }, 500); // 500ms debounce delay
++
++  // Update the input event listener
++  emojiSearchInputElement.addEventListener(
++    "input",
++    async (event: InputEvent) => {
++      if (event.isComposing) {
++        return;
++      }
++      handleEmojiSearch(emojiSearchInputElement.value);
++    }
++  );
++
 +  emojiSearchInputElement.addEventListener("compositionend", async () => {
 +    emojisContentElement.innerHTML = await filterEmoji(
 +      emojiSearchInputElement.value
@@ -1016,30 +1062,6 @@ index df3f8baf7..ff96d6fa3 100644
 +    }
 +    lazyLoadEmojiImg(dialog.element);
 +  });
-+  emojiSearchInputElement.addEventListener(
-+    "input",
-+    async (event: InputEvent) => {
-+      if (event.isComposing) {
-+        return;
-+      }
-+      emojisContentElement.innerHTML = await filterEmoji(
-+        emojiSearchInputElement.value
-+      );
-+      if (emojiSearchInputElement.value) {
-+        emojisContentElement.nextElementSibling.classList.add("fn__none");
-+      } else {
-+        emojisContentElement.nextElementSibling.classList.remove("fn__none");
-+      }
-+      emojisContentElement.scrollTop = 0;
-+      dialog.element
-+        .querySelector(".emojis__item")
-+        ?.classList.add("emojis__item--current");
-+      if (emojiSearchInputElement.value === "") {
-+        lazyLoadEmoji(dialog.element);
-+      }
-+      lazyLoadEmojiImg(dialog.element);
-+    }
-+  );
 +  emojiSearchInputElement.addEventListener(
 +    "keydown",
 +    (event: KeyboardEvent) => {
@@ -1403,8 +1425,7 @@ index df3f8baf7..ff96d6fa3 100644
 -                    newCurrentElement = newCurrentElement.previousElementSibling as HTMLElement;
 -                    counter--;
 -                }
-+              item.classList.add("fn__none");
-             }
+-            }
 -            event.preventDefault();
 -            event.stopPropagation();
 -        }
@@ -1415,7 +1436,8 @@ index df3f8baf7..ff96d6fa3 100644
 -                emojisContentElement.scrollTop = newCurrentElement.offsetTop - inputHeight - 6;
 -            } else if (newCurrentElement.offsetTop - inputHeight - emojisContentElement.clientHeight + newCurrentElement.clientHeight > emojisContentElement.scrollTop) {
 -                emojisContentElement.scrollTop = newCurrentElement.offsetTop - inputHeight - emojisContentElement.clientHeight + newCurrentElement.clientHeight;
--            }
++              item.classList.add("fn__none");
+             }
 -        }
 -    });
 -    if (!isMobile() && currentTab === "emoji") {
@@ -1826,7 +1848,7 @@ index df3f8baf7..ff96d6fa3 100644
 +    window.siyuan.emojis = response.data as IEmoji[];
 +    getAllEditor().forEach((item) => {
 +      putEmojis(item.protyle);
-+    });
+     });
 +  });
 +};
 +
@@ -1868,7 +1890,7 @@ index df3f8baf7..ff96d6fa3 100644
 +        description_ja_jp: icon.tags.join(", "),
 +        keywords: `${icon.tags.join(" ")} __url__${urlData}`, // Store URLs in keywords with a special prefix
 +      };
-     });
++    });
 +  } catch (error) {
 +    console.error("IconFinder search failed:", error);
 +    return [];
@@ -1893,7 +1915,6 @@ index df3f8baf7..ff96d6fa3 100644
 +  iconId: string
 +): Promise<string> => {
 +  try {
-+    // First check if we already have this icon
 +    const assetPath = `/assets/emojis/external-${iconId}.png`;
 +
 +    // Check if already exists
@@ -1904,24 +1925,21 @@ index df3f8baf7..ff96d6fa3 100644
 +      // File doesn't exist, continue with download
 +    }
 +
-+    // Download the icon
++    // Download the icon - URL already includes API key from searchIconFinder
 +    const response = await fetch(iconUrl);
 +    if (!response.ok) {
 +      throw new Error("Failed to download icon");
 +    }
 +
-+    // Convert to blob
 +    const blob = await response.blob();
 +    const formData = new FormData();
 +    formData.append("file", blob, `external-${iconId}.png`);
 +    formData.append("assetPath", assetPath);
 +
-+    // Store in assets
 +    await fetchPost("/api/file/upload", formData);
-+
 +    return assetPath;
 +  } catch (error) {
 +    console.error("Failed to download and store icon:", error);
-+    return iconUrl; // Fallback to direct URL
++    throw error; // Rethrow to handle in calling code
 +  }
  };
