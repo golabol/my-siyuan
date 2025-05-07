@@ -39,10 +39,10 @@ index acdac0d50..5cbf8339c 100644
      onSetappearance(data: Config.IAppearance) {
          if (data.lang !== window.siyuan.config.appearance.lang) {
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..6c851818a 100644
+index df3f8baf7..97b02e5ba 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
-@@ -1,276 +1,485 @@
+@@ -1,276 +1,487 @@
 -import {getRandom, isMobile} from "../util/functions";
 -import {fetchPost} from "../util/fetch";
 -import {Constants} from "../constants";
@@ -296,6 +296,7 @@ index df3f8baf7..6c851818a 100644
 +  let maxCount = 0;
 +  let keyHTML = "";
 +  const customStore: IEmojiItem[] = [];
++  let externalIconsContent = "";
 +
 +  // Process local emojis
 +  window.siyuan.emojis.forEach((category, index) => {
@@ -424,57 +425,10 @@ index df3f8baf7..6c851818a 100644
 -            return 0;
 -        }).forEach(item => {
 -            html += `<button data-unicode="${item.unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(item)}">
--${unicode2Emoji(item.unicode, undefined, false, true)}</button>`;
 +    if (!key) {
 +      html += "</div>";
 +    }
 +  });
-+
-+  // Check for API key and search string before attempting external search
-+  if (
-+    key &&
-+    key.length > 2 &&
-+    window.siyuan.config.appearance.iconFinderAPIKey &&
-+    window.siyuan.config.appearance.iconFinderAPIKey.trim() !== ""
-+  ) {
-+    try {
-+      const externalIcons = await searchIconFinder(key, max || 20);
-+
-+      if (externalIcons.length > 0) {
-+        html += `<div class="emojis__title">External Icons</div><div class="emojis__content">`;
-+        html += '<div class="fn__hr"></div>';
-+
-+        externalIcons.forEach((icon) => {
-+          const urls = extractUrlsFromKeywords(icon.keywords);
-+          if (urls) {
-+            html += `<button data-unicode="${icon.unicode}" 
-+          data-download-url="${urls.downloadUrl}"
-+          class="emojis__item ariaLabel" 
-+          onmouseover="this.style.backgroundColor='var(--b3-theme-surface)'"
-+          onmouseout="this.style.backgroundColor='var(--b3-theme-background)'"
-+          aria-label="${getEmojiDesc(icon)}">
-+          <img src="${urls.previewUrl}" 
-+           style="width: 24px; 
-+              height: 24px; 
-+              object-fit: contain;"/>
-+          </button>`;
-+          }
-         });
--        html = html + keyHTML + "</div>";
-+
-+        html += "</div>";
-+      }
-+    } catch (error) {
-+      console.error("Error fetching external icons:", error);
-     }
--    let recentHTML = "";
--    if (recentEmojis.length > 0) {
--        recentHTML = `<div class="emojis__title" data-type="0">${window.siyuan.languages.recentEmoji}</div><div class="emojis__content">`;
--        window.siyuan.config.editor.emoji.forEach(emojiUnicode => {
--            const emoji = recentEmojis.filter((item) => item.unicode === emojiUnicode);
--            if (emoji[0]) {
--                recentHTML += `<button data-unicode="${emoji[0].unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(emoji[0])}">
-+  }
 +
 +  // Process custom emojis
 +  if (key) {
@@ -515,10 +469,57 @@ index df3f8baf7..6c851818a 100644
 +        html += `<button data-unicode="${
 +          item.unicode
 +        }" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(item)}">
-+${unicode2Emoji(item.unicode, undefined, false, true)}</button>`;
+ ${unicode2Emoji(item.unicode, undefined, false, true)}</button>`;
 +      });
 +    html = html + keyHTML + "</div>";
 +  }
++
++  // Check for API key and search string before attempting external search
++  if (
++    key &&
++    key.length > 2 &&
++    window.siyuan.config.appearance.iconFinderAPIKey &&
++    window.siyuan.config.appearance.iconFinderAPIKey.trim() !== ""
++  ) {
++    try {
++      const externalIcons = await searchIconFinder(key, max || 20);
++
++      if (externalIcons.length > 0) {
++        externalIconsContent += `<div class="emojis__title fn__block">External Icons</div><div class="emojis__content">`;
++        externalIconsContent += '<div class="fn__hr"></div>';
++
++        externalIcons.forEach((icon) => {
++          const urls = extractUrlsFromKeywords(icon.keywords);
++          if (urls) {
++            externalIconsContent += `<button data-unicode="${icon.unicode}"
++          data-download-url="${urls.downloadUrl}"
++          class="emojis__item ariaLabel" 
++          onmouseover="this.style.backgroundColor='var(--b3-theme-surface)'"
++          onmouseout="this.style.backgroundColor='var(--b3-theme-background)'"
++          aria-label="${getEmojiDesc(icon)}">
++          <img src="${urls.previewUrl}" 
++           style="width: 24px; 
++              height: 24px; 
++              object-fit: contain;"/>
++          </button>`;
++          }
+         });
+-        html = html + keyHTML + "</div>";
++
++        externalIconsContent += "</div>";
++      }
++    } catch (error) {
++      console.error("Error fetching external icons:", error);
+     }
+-    let recentHTML = "";
+-    if (recentEmojis.length > 0) {
+-        recentHTML = `<div class="emojis__title" data-type="0">${window.siyuan.languages.recentEmoji}</div><div class="emojis__content">`;
+-        window.siyuan.config.editor.emoji.forEach(emojiUnicode => {
+-            const emoji = recentEmojis.filter((item) => item.unicode === emojiUnicode);
+-            if (emoji[0]) {
+-                recentHTML += `<button data-unicode="${emoji[0].unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(emoji[0])}">
++  }
++  html += externalIconsContent;
 +
 +  // Process recent emojis
 +  let recentHTML = "";
@@ -754,7 +755,7 @@ index df3f8baf7..6c851818a 100644
      </div>
      <div class="emojis__tabbody">
          <div class="fn__none" data-type="tab-emoji">
-@@ -279,481 +488,910 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -279,481 +490,924 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="fn__space"></span>
                  <label class="b3-form__icon fn__flex-1" style="overflow:initial;">
                      <svg class="b3-form__icon-icon"><use xlink:href="#iconSearch"></use></svg>
@@ -1121,7 +1122,7 @@ index df3f8baf7..6c851818a 100644
 +  });
 +  emojiSearchInputElement.addEventListener(
 +    "keydown",
-+    (event: KeyboardEvent) => {
++    async (event: KeyboardEvent) => {
 +      if (event.isComposing) {
 +        return;
 +      }
@@ -1135,7 +1136,25 @@ index df3f8baf7..6c851818a 100644
 +        return;
 +      }
 +      if (event.key === "Enter") {
-+        const unicode = currentElement.getAttribute("data-unicode");
++        let unicode = currentElement.getAttribute("data-unicode");
++
++        // Handle external icons
++        if (unicode.startsWith("external-")) {
++          const downloadUrl = currentElement.getAttribute("data-download-url");
++          try {
++            const iconId = unicode.replace("external-", "");
++            const assetPath = await downloadAndStoreIcon(downloadUrl, iconId);
++            unicode = `external/external-${iconId}.png`;
++            // unicode = assetPath; // emojis/external/external-653276-20250508012313-7g2kc0m.png
++          } catch (error) {
++            console.error("Failed to process external icon:", error);
++          }
+         }
+-        emojisContentElement.scrollTop = 0;
+-        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
+-        if (emojiSearchInputElement.value === "") {
+-            lazyLoadEmoji(dialog.element);
++
 +        if (type === "notebook") {
 +          fetchPost(
 +            "/api/notebook/setNotebookIcon",
@@ -1164,18 +1183,17 @@ index df3f8baf7..6c851818a 100644
 +            }
 +          );
          }
--        emojisContentElement.scrollTop = 0;
--        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
--        if (emojiSearchInputElement.value === "") {
--            lazyLoadEmoji(dialog.element);
-+        if (callback) {
-+          callback(unicode);
-         }
 -        lazyLoadEmojiImg(dialog.element);
 -    });
 -    emojiSearchInputElement.addEventListener("input", (event: InputEvent) => {
 -        if (event.isComposing) {
 -            return;
++        if (callback) {
++          callback(unicode);
+         }
+-        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
+-        if (emojiSearchInputElement.value) {
+-            emojisContentElement.nextElementSibling.classList.add("fn__none");
 +        event.preventDefault();
 +        event.stopPropagation();
 +        return;
@@ -1213,10 +1231,7 @@ index df3f8baf7..6c851818a 100644
 +            .nextElementSibling.firstElementChild as HTMLElement;
 +          event.preventDefault();
 +          event.stopPropagation();
-         }
--        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
--        if (emojiSearchInputElement.value) {
--            emojisContentElement.nextElementSibling.classList.add("fn__none");
++        }
 +      } else if (event.key === "ArrowDown") {
 +        if (!currentElement.nextElementSibling) {
 +          const nextContentElement =
@@ -1322,8 +1337,8 @@ index df3f8baf7..6c851818a 100644
 +          try {
 +            const iconId = unicode.replace("external-", "");
 +            const assetPath = await downloadAndStoreIcon(downloadUrl, iconId);
-+            // unicode = `external/external-${iconId}.png`;
-+            unicode = assetPath;
++            unicode = `external/external-${iconId}.png`;
++            // unicode = assetPath; // emojis/external/external-653276-20250508012313-7g2kc0m.png
 +          } catch (error) {
 +            console.error("Failed to process external icon:", error);
 +            break;
