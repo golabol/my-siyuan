@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "release version/tag (e.g., v3.1.28)"
+        description: "target version/tag (e.g., v3.1.28)"
         required: true
       packageManager:
         description: "pnpm@x.x.x"
         required: true
       local_version:
-        description: "release version/tag (e.g., v3.1.28)"
+        description: "local version/tag (e.g., v3.1.28)"
         required: false
 
 jobs:
