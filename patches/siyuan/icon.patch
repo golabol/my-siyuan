@@ -39,7 +39,7 @@ index acdac0d50..5cbf8339c 100644
      onSetappearance(data: Config.IAppearance) {
          if (data.lang !== window.siyuan.config.appearance.lang) {
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..d68c59940 100644
+index df3f8baf7..6c851818a 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
 @@ -1,276 +1,485 @@
@@ -48,7 +48,7 @@ index df3f8baf7..d68c59940 100644
 -import {Constants} from "../constants";
 -import {Files} from "../layout/dock/Files";
 +import { getRandom, isMobile } from "../util/functions";
-+import { fetchPost } from "../util/fetch";
++import { fetchPost, fetchSyncPost } from "../util/fetch";
 +import { Constants } from "../constants";
 +import { Files } from "../layout/dock/Files";
  /// #if !MOBILE
@@ -754,7 +754,7 @@ index df3f8baf7..d68c59940 100644
      </div>
      <div class="emojis__tabbody">
          <div class="fn__none" data-type="tab-emoji">
-@@ -279,481 +488,912 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -279,481 +488,910 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="fn__space"></span>
                  <label class="b3-form__icon fn__flex-1" style="overflow:initial;">
                      <svg class="b3-form__icon-icon"><use xlink:href="#iconSearch"></use></svg>
@@ -1198,10 +1198,7 @@ index df3f8baf7..d68c59940 100644
 +            .lastElementChild as HTMLElement;
 +          event.preventDefault();
 +          event.stopPropagation();
-         }
--        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
--        if (emojiSearchInputElement.value) {
--            emojisContentElement.nextElementSibling.classList.add("fn__none");
++        }
 +      } else if (event.key === "ArrowRight") {
 +        if (currentElement.nextElementSibling) {
 +          currentElement.classList.remove("emojis__item--current");
@@ -1216,7 +1213,10 @@ index df3f8baf7..d68c59940 100644
 +            .nextElementSibling.firstElementChild as HTMLElement;
 +          event.preventDefault();
 +          event.stopPropagation();
-+        }
+         }
+-        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
+-        if (emojiSearchInputElement.value) {
+-            emojisContentElement.nextElementSibling.classList.add("fn__none");
 +      } else if (event.key === "ArrowDown") {
 +        if (!currentElement.nextElementSibling) {
 +          const nextContentElement =
@@ -1322,6 +1322,7 @@ index df3f8baf7..d68c59940 100644
 +          try {
 +            const iconId = unicode.replace("external-", "");
 +            const assetPath = await downloadAndStoreIcon(downloadUrl, iconId);
++            // unicode = `external/external-${iconId}.png`;
 +            unicode = assetPath;
 +          } catch (error) {
 +            console.error("Failed to process external icon:", error);
@@ -1482,8 +1483,7 @@ index df3f8baf7..d68c59940 100644
 -                    newCurrentElement = newCurrentElement.previousElementSibling as HTMLElement;
 -                    counter--;
 -                }
-+              item.classList.add("fn__none");
-             }
+-            }
 -            event.preventDefault();
 -            event.stopPropagation();
 -        }
@@ -1494,7 +1494,8 @@ index df3f8baf7..d68c59940 100644
 -                emojisContentElement.scrollTop = newCurrentElement.offsetTop - inputHeight - 6;
 -            } else if (newCurrentElement.offsetTop - inputHeight - emojisContentElement.clientHeight + newCurrentElement.clientHeight > emojisContentElement.scrollTop) {
 -                emojisContentElement.scrollTop = newCurrentElement.offsetTop - inputHeight - emojisContentElement.clientHeight + newCurrentElement.clientHeight;
--            }
++              item.classList.add("fn__none");
+             }
 -        }
 -    });
 -    if (!isMobile() && currentTab === "emoji") {
@@ -1905,7 +1906,7 @@ index df3f8baf7..d68c59940 100644
 +    window.siyuan.emojis = response.data as IEmoji[];
 +    getAllEditor().forEach((item) => {
 +      putEmojis(item.protyle);
-+    });
+     });
 +  });
 +};
 +
@@ -2008,8 +2009,12 @@ index df3f8baf7..d68c59940 100644
 +
 +    // Check if already exists first
 +    try {
-+      await fetchPost("/api/file/getFile", { path: assetPath });
-+      return assetPath;
++      const getFileResponse = await fetchSyncPost("/api/file/getFile", {
++        path: assetPath,
++      });
++      if (getFileResponse.code === 200) {
++        return getFileResponse.data.path;
++      }
 +    } catch {
 +      // File doesn't exist, continue with download
 +    }
@@ -2035,26 +2040,19 @@ index df3f8baf7..d68c59940 100644
 +    );
 +    formData.append("assetsDirPath", "/emojis/external/");
 +
-+    // return assetPath;
-+    return await new Promise(async (resolve, reject) => {
-+        // Upload the file
-+        await fetchPost("/api/asset/upload", formData, (
-+          resp => {
-+            if (resp.code === 0) {
-+              const succMap = resp.data.succMap;
-+              const paths = Object.values(succMap);
-+              if (paths && paths.length > 0) {
-+                resolve(paths[0]);  // Return first successful upload path
-+              } else {
-+                resolve(null);
-+              }
-+            }
-+            else {
-+              resolve(null);
-+            }
-+          }
-+        ));
-     });
++    const uploadAssetResponse = await fetchSyncPost(
++      "/api/asset/upload",
++      formData
++    );
++    if (uploadAssetResponse.code === 0) {
++      const succMap = uploadAssetResponse.data.succMap;
++      const paths = Object.values(succMap);
++      if (paths && paths.length > 0) {
++        return paths[0];
++      } else {
++        return null;
++      }
++    }
 +  } catch (error) {
 +    console.error("Failed to download and store icon:", error);
 +    throw error;
