@@ -1,8 +1,45 @@
+diff --git a/app/src/config/appearance.ts b/app/src/config/appearance.ts
+index acdac0d50..b3d6a8a69 100644
+--- a/app/src/config/appearance.ts
++++ b/app/src/config/appearance.ts
+@@ -119,6 +119,14 @@ export const appearance = {
+         ${window.siyuan.languages.showInFolder}
+     </button>
+ </div>
++<div class="b3-label config__item${isBrowser() ? " fn__none" : " fn__flex"}">
++    <div class="fn__block">
++        IconFinder API Key
++        <div class="b3-label__text">Your IconFinder.com Api Key</div>
++        <span class="fn__hr"></span>
++        <input class="b3-text-field fn__block" id="iconFinderAPIKey" value="${window.siyuan.config.appearance.iconFinderAPIKey}"/>
++    </div>
++</div>
+ <div class="b3-label fn__flex config__item">
+    <div class="fn__flex-1">
+         ${window.siyuan.languages.resetLayout}
+@@ -184,6 +192,7 @@ export const appearance = {
+             lightThemes: window.siyuan.config.appearance.lightThemes,
+             icons: window.siyuan.config.appearance.icons,
+             lang: (appearance.element.querySelector("#lang") as HTMLSelectElement).value,
++            iconFinderAPIKey: (appearance.element.querySelector("#iconFinderAPIKey") as HTMLInputElement).value, // TODO
+             closeButtonBehavior: (appearance.element.querySelector("#closeButtonBehavior") as HTMLInputElement).checked ? 1 : 0,
+             hideStatusBar: (appearance.element.querySelector("#hideStatusBar") as HTMLInputElement).checked,
+         }, async response => {
+@@ -241,6 +250,9 @@ export const appearance = {
+         appearance.element.querySelector("#appearanceOpenEmoji").addEventListener("click", () => {
+             shell.openPath(path.join(window.siyuan.config.system.dataDir, "emojis"));
+         });
++        appearance.element.querySelector("#appearanceOpenEmoji").addEventListener("click", () => {
++            shell.openPath(path.join(window.siyuan.config.system.dataDir, "emojis"));
++        });
+         /// #endif
+         appearance.element.querySelectorAll("select").forEach(item => {
+             item.addEventListener("change", () => {
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..e6e2eadd6 100644
+index df3f8baf7..92ac5e23f 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
-@@ -1,276 +1,468 @@
+@@ -1,276 +1,488 @@
 -import {getRandom, isMobile} from "../util/functions";
 -import {fetchPost} from "../util/fetch";
 -import {Constants} from "../constants";
@@ -27,26 +64,41 @@ index df3f8baf7..e6e2eadd6 100644
 +import { setStorageVal } from "../protyle/util/compatibility";
  import * as dayjs from "dayjs";
  
++interface IIconFinderResponseIcon {
++  icon_id: number;
++  tags: string[];
++  published_at: string;
++  is_premium: boolean;
++  type: string;
++  containers: any[];
++  raster_sizes: Array<{
++    formats: Array<{
++      format: string;
++      preview_url: string;
++      download_url: string;
++    }>;
++    size: number;
++    size_width: number;
++    size_height: number;
++  }>;
++  vector_sizes: Array<{
++    formats: Array<{
++      format: string;
++      download_url: string;
++    }>;
++    target_sizes: number[][];
++    size: number;
++    size_width: number;
++    size_height: number;
++  }>;
++  styles: any[];
++  categories: any[];
++  is_icon_glyph: boolean;
++}
++
 +interface IIconFinderResponse {
 +  total_count: number;
-+  icons: Array<{
-+    icon_id: number;
-+    tags: string[];
-+    categories: string[];
-+    styles: string[];
-+    prices: any[];
-+    published_at: string;
-+    is_premium: boolean;
-+    type: string;
-+    preview_url: string;
-+    vector_sizes: Array<{
-+      size: number;
-+      formats: Array<{
-+        format: string;
-+        download_url: string;
-+      }>;
-+    }>;
-+  }>;
++  icons: Array<IIconFinderResponseIcon>;
 +}
 +
 +// Add debounce utility
@@ -375,8 +427,13 @@ index df3f8baf7..e6e2eadd6 100644
 +    }
 +  });
 +
-+  // If we have a search key, also search external icons
-+  if (key && key.length > 2) {
++  // Check for API key and search string before attempting external search
++  if (
++    key &&
++    key.length > 2 &&
++    window.siyuan.config.appearance.iconFinderAPIKey &&
++    window.siyuan.config.appearance.iconFinderAPIKey.trim() !== ""
++  ) {
 +    try {
 +      const externalIcons = await searchIconFinder(key, max || 20);
 +
@@ -697,7 +754,7 @@ index df3f8baf7..e6e2eadd6 100644
      </div>
      <div class="emojis__tabbody">
          <div class="fn__none" data-type="tab-emoji">
-@@ -279,481 +471,852 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -279,481 +491,897 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="fn__space"></span>
                  <label class="b3-form__icon fn__flex-1" style="overflow:initial;">
                      <svg class="b3-form__icon-icon"><use xlink:href="#iconSearch"></use></svg>
@@ -1852,17 +1909,46 @@ index df3f8baf7..e6e2eadd6 100644
 +  });
 +};
 +
++function getIconUrls(
++  icon: IIconFinderResponseIcon,
++  targetSize: number = 256
++): { downloadUrl: string; previewUrl: string } {
++  // Sort raster_sizes by size, closest to target first
++  const sizes = icon.raster_sizes.sort((a, b) => {
++    const aDiff = Math.abs(a.size - targetSize);
++    const bDiff = Math.abs(b.size - targetSize);
++    return aDiff - bDiff;
++  });
++
++  // Find first size that has PNG format
++  for (const size of sizes) {
++    const pngFormat = size.formats.find((f) => f.format === "png");
++    if (pngFormat) {
++      return {
++        downloadUrl: pngFormat.download_url,
++        previewUrl: pngFormat.preview_url,
++      };
++    }
++  }
++
++  // Fallback to first available format if no PNG found
++  const firstSize = sizes[0];
++  return {
++    downloadUrl: firstSize.formats[0].download_url,
++    previewUrl: firstSize.formats[0].preview_url,
++  };
++}
++
 +export const searchIconFinder = async (
 +  query: string,
 +  maxResults: number = 20
 +): Promise<IEmojiItem[]> => {
 +  try {
-+    const ICONFINDER_API_KEY =
-+      "2oUotyzVLWDUSVRBveZ0isKgLXVvJd5Jvc95Mble9L6UjeD132pqrYnsoifArVad";
++    const ICONFINDER_API_KEY = window.siyuan.config.appearance.iconFinderAPIKey;
 +    const response = await fetch(
 +      `https://api.iconfinder.com/v4/icons/search?query=${encodeURIComponent(
 +        query
-+      )}&count=${maxResults}`,
++      )}&count=${maxResults}&premium=0`,
 +      {
 +        headers: {
 +          Authorization: `Bearer ${ICONFINDER_API_KEY}`,
@@ -1876,19 +1962,22 @@ index df3f8baf7..e6e2eadd6 100644
 +
 +    const data: IIconFinderResponse = await response.json();
 +
-+    // Convert to IEmojiItem format exactly
-+    return data.icons.map((icon): IEmojiItem => {
-+      // Store download and preview URLs in the keywords field, separated by a special delimiter
-+      const urlData = `${
-+        icon.vector_sizes[0]?.formats[0]?.download_url || icon.preview_url
-+      }|${icon.preview_url}`;
++    // Filter non-premium icons and limit to 10
++    const nonPremiumIcons = data.icons
++      .filter((icon) => !icon.is_premium)
++      .slice(0, 10);
++
++    // Convert to IEmojiItem format
++    return nonPremiumIcons.map((icon): IEmojiItem => {
++      const urls = getIconUrls(icon);
++      const urlData = `${urls.downloadUrl}|${urls.previewUrl}`;
 +
 +      return {
 +        unicode: `external-${icon.icon_id}`,
 +        description: icon.tags.join(", "),
 +        description_zh_cn: icon.tags.join(", "),
 +        description_ja_jp: icon.tags.join(", "),
-+        keywords: `${icon.tags.join(" ")} __url__${urlData}`, // Store URLs in keywords with a special prefix
++        keywords: `${icon.tags.join(" ")} __url__${urlData}`,
 +      };
 +    });
 +  } catch (error) {
@@ -1915,9 +2004,9 @@ index df3f8baf7..e6e2eadd6 100644
 +  iconId: string
 +): Promise<string> => {
 +  try {
-+    const assetPath = `/assets/emojis/external-${iconId}.png`;
++    const assetPath = `assets/emojis/external-${iconId}.png`;
 +
-+    // Check if already exists
++    // Check if already exists first
 +    try {
 +      await fetchPost("/api/file/getFile", { path: assetPath });
 +      return assetPath;
@@ -1925,21 +2014,49 @@ index df3f8baf7..e6e2eadd6 100644
 +      // File doesn't exist, continue with download
 +    }
 +
-+    // Download the icon - URL already includes API key from searchIconFinder
-+    const response = await fetch(iconUrl);
++    // Download the icon
++    const ICONFINDER_API_KEY = window.siyuan.config.appearance.iconFinderAPIKey;
++    const response = await fetch(iconUrl, {
++      headers: {
++        Authorization: `Bearer ${ICONFINDER_API_KEY}`,
++      },
++    });
 +    if (!response.ok) {
 +      throw new Error("Failed to download icon");
 +    }
 +
 +    const blob = await response.blob();
 +    const formData = new FormData();
-+    formData.append("file", blob, `external-${iconId}.png`);
-+    formData.append("assetPath", assetPath);
 +
-+    await fetchPost("/api/file/upload", formData);
++    // Set up form data for upload
++    formData.append(
++      "file[]",
++      new File([blob], `external-${iconId}.png`, { type: "image/png" })
++    );
++    formData.append("assetsDirPath", "assets/emojis");
++
++    // Upload the file
++    await fetchPost("/api/asset/upload", formData);
++
++    // After successful upload, return the asset path
 +    return assetPath;
 +  } catch (error) {
 +    console.error("Failed to download and store icon:", error);
-+    throw error; // Rethrow to handle in calling code
++    throw error;
 +  }
  };
+diff --git a/app/src/types/config.d.ts b/app/src/types/config.d.ts
+index be656bd5a..3647c9ab4 100644
+--- a/app/src/types/config.d.ts
++++ b/app/src/types/config.d.ts
+@@ -230,6 +230,10 @@ declare namespace Config {
+          * The language used by the current user
+          */
+         lang: TLang;
++        /**
++         * The api key for iconfinder.com
++         */
++        iconFinderAPIKey: string;
+         /**
+          * List of installed light themes
+          */
