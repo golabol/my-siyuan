@@ -1,5 +1,5 @@
 diff --git a/app/src/config/appearance.ts b/app/src/config/appearance.ts
-index acdac0d50..b3d6a8a69 100644
+index acdac0d50..f1680beab 100644
 --- a/app/src/config/appearance.ts
 +++ b/app/src/config/appearance.ts
 @@ -119,6 +119,14 @@ export const appearance = {
@@ -11,7 +11,7 @@ index acdac0d50..b3d6a8a69 100644
 +        IconFinder API Key
 +        <div class="b3-label__text">Your IconFinder.com Api Key</div>
 +        <span class="fn__hr"></span>
-+        <input class="b3-text-field fn__block" id="iconFinderAPIKey" value="${window.siyuan.config.appearance.iconFinderAPIKey}"/>
++        <input class="b3-text-field fn__block" id="iconFinderAPIKey"/>
 +    </div>
 +</div>
  <div class="b3-label fn__flex config__item">
@@ -21,20 +21,18 @@ index acdac0d50..b3d6a8a69 100644
              lightThemes: window.siyuan.config.appearance.lightThemes,
              icons: window.siyuan.config.appearance.icons,
              lang: (appearance.element.querySelector("#lang") as HTMLSelectElement).value,
-+            iconFinderAPIKey: (appearance.element.querySelector("#iconFinderAPIKey") as HTMLInputElement).value, // TODO
++            iconFinderAPIKey: (appearance.element.querySelector("#iconFinderAPIKey") as HTMLInputElement).value,
              closeButtonBehavior: (appearance.element.querySelector("#closeButtonBehavior") as HTMLInputElement).checked ? 1 : 0,
              hideStatusBar: (appearance.element.querySelector("#hideStatusBar") as HTMLInputElement).checked,
          }, async response => {
-@@ -241,6 +250,9 @@ export const appearance = {
-         appearance.element.querySelector("#appearanceOpenEmoji").addEventListener("click", () => {
-             shell.openPath(path.join(window.siyuan.config.system.dataDir, "emojis"));
+@@ -252,6 +261,7 @@ export const appearance = {
+                 appearance._send();
+             });
          });
-+        appearance.element.querySelector("#appearanceOpenEmoji").addEventListener("click", () => {
-+            shell.openPath(path.join(window.siyuan.config.system.dataDir, "emojis"));
-+        });
-         /// #endif
-         appearance.element.querySelectorAll("select").forEach(item => {
-             item.addEventListener("change", () => {
++        (appearance.element.querySelector("#iconFinderAPIKey") as HTMLInputElement).value = window.siyuan.config.appearance.iconFinderAPIKey;
+     },
+     onSetappearance(data: Config.IAppearance) {
+         if (data.lang !== window.siyuan.config.appearance.lang) {
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
 index df3f8baf7..92ac5e23f 100644
 --- a/app/src/emoji/index.ts
