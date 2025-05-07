@@ -1,5 +1,5 @@
 diff --git a/app/src/config/appearance.ts b/app/src/config/appearance.ts
-index acdac0d50..f1680beab 100644
+index acdac0d50..5cbf8339c 100644
 --- a/app/src/config/appearance.ts
 +++ b/app/src/config/appearance.ts
 @@ -119,6 +119,14 @@ export const appearance = {
@@ -25,11 +25,16 @@ index acdac0d50..f1680beab 100644
              closeButtonBehavior: (appearance.element.querySelector("#closeButtonBehavior") as HTMLInputElement).checked ? 1 : 0,
              hideStatusBar: (appearance.element.querySelector("#hideStatusBar") as HTMLInputElement).checked,
          }, async response => {
-@@ -252,6 +261,7 @@ export const appearance = {
+@@ -252,6 +261,12 @@ export const appearance = {
                  appearance._send();
              });
          });
 +        (appearance.element.querySelector("#iconFinderAPIKey") as HTMLInputElement).value = window.siyuan.config.appearance.iconFinderAPIKey;
++        appearance.element.querySelectorAll("input").forEach((item) => {
++            item.addEventListener("change", () => {
++                appearance._send();
++            });
++        });
      },
      onSetappearance(data: Config.IAppearance) {
          if (data.lang !== window.siyuan.config.appearance.lang) {
