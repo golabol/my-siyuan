@@ -2058,3 +2058,23 @@ index be656bd5a..3647c9ab4 100644
          /**
           * List of installed light themes
           */
+diff --git a/kernel/conf/appearance.go b/kernel/conf/appearance.go
+index ebd1002ac..7627c7324 100644
+--- a/kernel/conf/appearance.go
++++ b/kernel/conf/appearance.go
+@@ -33,6 +33,7 @@ type Appearance struct {
+ 	ThemeJS             bool               `json:"themeJS"`             // 是否启用了主题 JavaScript
+ 	CloseButtonBehavior int                `json:"closeButtonBehavior"` // 关闭按钮行为，0：退出，1：最小化到托盘
+ 	HideStatusBar       bool               `json:"hideStatusBar"`       // 是否隐藏底部状态栏
++	IconFinderAPIKey       string               `json:"iconFinderAPIKey"`       // api key for iconfinder.com
+ }
+ 
+ func NewAppearance() *Appearance {
+@@ -45,6 +46,7 @@ func NewAppearance() *Appearance {
+ 		CodeBlockThemeLight: "github",
+ 		CodeBlockThemeDark:  "base16/dracula",
+ 		Lang:                "en_US",
++		IconFinderAPIKey:	 "",
+ 		CloseButtonBehavior: 0,
+ 		HideStatusBar:       false,
+ 	}
