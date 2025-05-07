@@ -1,8 +1,8 @@
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..045794e5a 100644
+index df3f8baf7..ff96d6fa3 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
-@@ -1,276 +1,451 @@
+@@ -1,276 +1,452 @@
 -import {getRandom, isMobile} from "../util/functions";
 -import {fetchPost} from "../util/fetch";
 -import {Constants} from "../constants";
@@ -588,7 +588,7 @@ index df3f8baf7..045794e5a 100644
 -    } else {
 -        window.siyuan.menus.menu.removeScrollEvent();
 -    }
-+export const openEmojiPanel = (
++export const openEmojiPanel = async (
 +  id: string,
 +  type: "doc" | "notebook" | "av",
 +  position: IPosition,
@@ -655,6 +655,7 @@ index df3f8baf7..045794e5a 100644
 -        width: isMobile() ? "80vw" : "368px",
 -        height: "50vh",
 -        content: `<div class="emojis">
++  const initialEmojis = await filterEmoji();
 +  const dialog = new Dialog({
 +    disableAnimation: true,
 +    transparent: true,
@@ -680,7 +681,7 @@ index df3f8baf7..045794e5a 100644
      </div>
      <div class="emojis__tabbody">
          <div class="fn__none" data-type="tab-emoji">
-@@ -279,481 +454,849 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -279,481 +455,850 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="fn__space"></span>
                  <label class="b3-form__icon fn__flex-1" style="overflow:initial;">
                      <svg class="b3-form__icon-icon"><use xlink:href="#iconSearch"></use></svg>
@@ -697,7 +698,7 @@ index df3f8baf7..045794e5a 100644
                  <span class="fn__space"></span>
              </div>
 -            <div class="emojis__panel">${filterEmoji()}</div>
-+            <div class="emojis__panel">${await filterEmoji()}</div>
++            <div class="emojis__panel">${initialEmojis}</div>
              <div class="fn__flex">
                  ${[
 -            ["2b50", window.siyuan.languages.recentEmoji],
@@ -1834,7 +1835,8 @@ index df3f8baf7..045794e5a 100644
 +  maxResults: number = 20
 +): Promise<IEmojiItem[]> => {
 +  try {
-+    const ICONFINDER_API_KEY = "2oUotyzVLWDUSVRBveZ0isKgLXVvJd5Jvc95Mble9L6UjeD132pqrYnsoifArVad";
++    const ICONFINDER_API_KEY =
++      "2oUotyzVLWDUSVRBveZ0isKgLXVvJd5Jvc95Mble9L6UjeD132pqrYnsoifArVad";
 +    const response = await fetch(
 +      `https://api.iconfinder.com/v4/icons/search?query=${encodeURIComponent(
 +        query
