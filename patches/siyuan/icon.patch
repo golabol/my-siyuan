@@ -39,10 +39,10 @@ index acdac0d50..5cbf8339c 100644
      onSetappearance(data: Config.IAppearance) {
          if (data.lang !== window.siyuan.config.appearance.lang) {
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..92ac5e23f 100644
+index df3f8baf7..d68c59940 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
-@@ -1,276 +1,488 @@
+@@ -1,276 +1,485 @@
 -import {getRandom, isMobile} from "../util/functions";
 -import {fetchPost} from "../util/fetch";
 -import {Constants} from "../constants";
@@ -442,24 +442,21 @@ index df3f8baf7..92ac5e23f 100644
 +
 +      if (externalIcons.length > 0) {
 +        html += `<div class="emojis__title">External Icons</div><div class="emojis__content">`;
++        html += '<div class="fn__hr"></div>';
 +
 +        externalIcons.forEach((icon) => {
 +          const urls = extractUrlsFromKeywords(icon.keywords);
 +          if (urls) {
 +            html += `<button data-unicode="${icon.unicode}" 
-+              data-download-url="${urls.downloadUrl}"
-+              class="emojis__item ariaLabel" 
-+              style="background-color: var(--b3-theme-background); 
-+                     border: 1px solid var(--b3-border-color); 
-+                     border-radius: 4px; 
-+                     padding: 2px;"
-+              onmouseover="this.style.backgroundColor='var(--b3-theme-surface)'"
-+              onmouseout="this.style.backgroundColor='var(--b3-theme-background)'"
-+              aria-label="${getEmojiDesc(icon)}">
-+              <img src="${urls.previewUrl}" 
-+                   style="width: 24px; 
-+                          height: 24px; 
-+                          object-fit: contain;"/>
++          data-download-url="${urls.downloadUrl}"
++          class="emojis__item ariaLabel" 
++          onmouseover="this.style.backgroundColor='var(--b3-theme-surface)'"
++          onmouseout="this.style.backgroundColor='var(--b3-theme-background)'"
++          aria-label="${getEmojiDesc(icon)}">
++          <img src="${urls.previewUrl}" 
++           style="width: 24px; 
++              height: 24px; 
++              object-fit: contain;"/>
 +          </button>`;
 +          }
          });
@@ -757,7 +754,7 @@ index df3f8baf7..92ac5e23f 100644
      </div>
      <div class="emojis__tabbody">
          <div class="fn__none" data-type="tab-emoji">
-@@ -279,481 +491,897 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -279,481 +488,912 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="fn__space"></span>
                  <label class="b3-form__icon fn__flex-1" style="overflow:initial;">
                      <svg class="b3-form__icon-icon"><use xlink:href="#iconSearch"></use></svg>
@@ -1201,7 +1198,10 @@ index df3f8baf7..92ac5e23f 100644
 +            .lastElementChild as HTMLElement;
 +          event.preventDefault();
 +          event.stopPropagation();
-+        }
+         }
+-        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
+-        if (emojiSearchInputElement.value) {
+-            emojisContentElement.nextElementSibling.classList.add("fn__none");
 +      } else if (event.key === "ArrowRight") {
 +        if (currentElement.nextElementSibling) {
 +          currentElement.classList.remove("emojis__item--current");
@@ -1216,10 +1216,7 @@ index df3f8baf7..92ac5e23f 100644
 +            .nextElementSibling.firstElementChild as HTMLElement;
 +          event.preventDefault();
 +          event.stopPropagation();
-         }
--        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
--        if (emojiSearchInputElement.value) {
--            emojisContentElement.nextElementSibling.classList.add("fn__none");
++        }
 +      } else if (event.key === "ArrowDown") {
 +        if (!currentElement.nextElementSibling) {
 +          const nextContentElement =
@@ -1485,7 +1482,8 @@ index df3f8baf7..92ac5e23f 100644
 -                    newCurrentElement = newCurrentElement.previousElementSibling as HTMLElement;
 -                    counter--;
 -                }
--            }
++              item.classList.add("fn__none");
+             }
 -            event.preventDefault();
 -            event.stopPropagation();
 -        }
@@ -1496,8 +1494,7 @@ index df3f8baf7..92ac5e23f 100644
 -                emojisContentElement.scrollTop = newCurrentElement.offsetTop - inputHeight - 6;
 -            } else if (newCurrentElement.offsetTop - inputHeight - emojisContentElement.clientHeight + newCurrentElement.clientHeight > emojisContentElement.scrollTop) {
 -                emojisContentElement.scrollTop = newCurrentElement.offsetTop - inputHeight - emojisContentElement.clientHeight + newCurrentElement.clientHeight;
-+              item.classList.add("fn__none");
-             }
+-            }
 -        }
 -    });
 -    if (!isMobile() && currentTab === "emoji") {
@@ -1908,7 +1905,7 @@ index df3f8baf7..92ac5e23f 100644
 +    window.siyuan.emojis = response.data as IEmoji[];
 +    getAllEditor().forEach((item) => {
 +      putEmojis(item.protyle);
-     });
++    });
 +  });
 +};
 +
@@ -2005,9 +2002,9 @@ index df3f8baf7..92ac5e23f 100644
 +export const downloadAndStoreIcon = async (
 +  iconUrl: string,
 +  iconId: string
-+): Promise<string> => {
++): Promise<string> | null => {
 +  try {
-+    const assetPath = `assets/emojis/external-${iconId}.png`;
++    const assetPath = `/data/emojis/external/external-${iconId}.png`;
 +
 +    // Check if already exists first
 +    try {
@@ -2036,13 +2033,28 @@ index df3f8baf7..92ac5e23f 100644
 +      "file[]",
 +      new File([blob], `external-${iconId}.png`, { type: "image/png" })
 +    );
-+    formData.append("assetsDirPath", "assets/emojis");
++    formData.append("assetsDirPath", "/emojis/external/");
 +
-+    // Upload the file
-+    await fetchPost("/api/asset/upload", formData);
-+
-+    // After successful upload, return the asset path
-+    return assetPath;
++    // return assetPath;
++    return await new Promise(async (resolve, reject) => {
++        // Upload the file
++        await fetchPost("/api/asset/upload", formData, (
++          resp => {
++            if (resp.code === 0) {
++              const succMap = resp.data.succMap;
++              const paths = Object.values(succMap);
++              if (paths && paths.length > 0) {
++                resolve(paths[0]);  // Return first successful upload path
++              } else {
++                resolve(null);
++              }
++            }
++            else {
++              resolve(null);
++            }
++          }
++        ));
+     });
 +  } catch (error) {
 +    console.error("Failed to download and store icon:", error);
 +    throw error;
