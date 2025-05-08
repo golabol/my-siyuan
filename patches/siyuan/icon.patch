@@ -76,7 +76,7 @@ index dc2e37fdd..36ee5250e 100644
                      icon: "iconFiles",
                      hotkeyLangId: "fileTree",
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..cbac27fce 100644
+index df3f8baf7..09e88a68d 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
 @@ -1,276 +1,535 @@
@@ -289,8 +289,8 @@ index df3f8baf7..cbac27fce 100644
 -        html = `<div class="emojis__title">${window.siyuan.languages.emoji}</div><div class="emojis__content">`;
 +export const filterEmoji = async (
 +  key = "",
-+  triggered_by: "slash_hint" | "doc_notebook" = "doc_notebook",
-+  max?: number
++  max?: number,
++  triggered_by: "slash_hint" | "doc_notebook" = "doc_notebook"
 +) => {
 +  let html = "";
 +  const recentEmojis: IEmojiItem[] = [];
@@ -2379,27 +2379,101 @@ index 07f8c48e8..0f51f2209 100644
              icon: "iconRefresh",
              label: window.siyuan.languages.rebuildIndex,
 diff --git a/app/src/protyle/hint/index.ts b/app/src/protyle/hint/index.ts
-index 72adbf4cf..f69923c2c 100644
+index 72adbf4cf..5c2617036 100644
 --- a/app/src/protyle/hint/index.ts
 +++ b/app/src/protyle/hint/index.ts
-@@ -366,7 +366,7 @@ ${genHintItemHTML(item)}
+@@ -364,48 +364,55 @@ ${genHintItemHTML(item)}
+             return;
+         }
  
-         const panelElement = this.element.querySelector(".emojis__panel");
-         if (panelElement) {
+-        const panelElement = this.element.querySelector(".emojis__panel");
+-        if (panelElement) {
 -            panelElement.innerHTML = filterEmoji(value, 256);
-+            panelElement.innerHTML = filterEmoji(value, "slash_hint", 256);
-             if (value) {
-                 panelElement.nextElementSibling.classList.add("fn__none");
+-            if (value) {
+-                panelElement.nextElementSibling.classList.add("fn__none");
++        const afterEmojiPanelInit = () => {
++            const firstEmojiElement = this.element.querySelector(".emojis__item");
++            if (firstEmojiElement) {
++                firstEmojiElement.classList.add("emojis__item--current");
++                this.element.classList.remove("fn__none");
++                const textareaPosition = getSelectionPosition(protyle.wysiwyg.element);
++                setPosition(this.element, textareaPosition.left, textareaPosition.top + 26, 30);
++                this.element.querySelector(".emojis__panel").scrollTop = 0;
              } else {
-@@ -376,7 +376,7 @@ ${genHintItemHTML(item)}
+-                panelElement.nextElementSibling.classList.remove("fn__none");
++                this.element.classList.add("fn__none");
+             }
+-            lazyLoadEmojiImg(panelElement);
++        }
++
++        const panelElement = this.element.querySelector(".emojis__panel");
++        if (panelElement) {
++            filterEmoji(value, 256, "slash_hint").then(emojiHTML => {
++                panelElement.innerHTML = emojiHTML;
++                if (value) {
++                    panelElement.nextElementSibling.classList.add("fn__none");
++                } else {
++                    panelElement.nextElementSibling.classList.remove("fn__none");
++                }
++                lazyLoadEmojiImg(panelElement);
++            }).then(afterEmojiPanelInit);
          } else {
-             // max-height：min(402px,40vh) 和 .protyle-hint 保持一致，否则 emoji 不显示底部导航
-             this.element.innerHTML = `<div style="padding:0;max-height:min(402px,40vh);width:366px" class="emojis">
+-            // max-height：min(402px,40vh) 和 .protyle-hint 保持一致，否则 emoji 不显示底部导航
+-            this.element.innerHTML = `<div style="padding:0;max-height:min(402px,40vh);width:366px" class="emojis">
 -<div class="emojis__panel">${filterEmoji(value, 256)}</div>
-+<div class="emojis__panel">${filterEmoji(value, "slash_hint", 256)}</div>
++            filterEmoji(value, 256, "slash_hint").then(emojiHTML => {
++                // max-height：min(402px,40vh) 和 .protyle-hint 保持一致，否则 emoji 不显示底部导航
++                this.element.innerHTML = `<div style="padding:0;max-height:min(402px,40vh);width:366px" class="emojis">
++<div class="emojis__panel">${emojiHTML}</div>
  <div class="fn__flex${value ? " fn__none" : ""}">
-     ${[
-                 ["2b50", window.siyuan.languages.recentEmoji],
+-    ${[
+-                ["2b50", window.siyuan.languages.recentEmoji],
+-                ["1f527", getEmojiTitle(0)],
+-                ["1f60d", getEmojiTitle(1)],
+-                ["1f433", getEmojiTitle(2)],
+-                ["1f96a", getEmojiTitle(3)],
+-                ["1f3a8", getEmojiTitle(4)],
+-                ["1f3dd-fe0f", getEmojiTitle(5)],
+-                ["1f52e", getEmojiTitle(6)],
+-                ["267e-fe0f", getEmojiTitle(7)],
+-                ["1f6a9", getEmojiTitle(8)],
+-            ].map(([unicode, title], index) =>
+-                `<button data-type="${index}" class="emojis__type ariaLabel" aria-label="${title}">${unicode2Emoji(unicode)}</button>`
+-            ).join("")}
++        ${[
++                    ["2b50", window.siyuan.languages.recentEmoji],
++                    ["1f527", getEmojiTitle(0)],
++                    ["1f60d", getEmojiTitle(1)],
++                    ["1f433", getEmojiTitle(2)],
++                    ["1f96a", getEmojiTitle(3)],
++                    ["1f3a8", getEmojiTitle(4)],
++                    ["1f3dd-fe0f", getEmojiTitle(5)],
++                    ["1f52e", getEmojiTitle(6)],
++                    ["267e-fe0f", getEmojiTitle(7)],
++                    ["1f6a9", getEmojiTitle(8)],
++                ].map(([unicode, title], index) =>
++                    `<button data-type="${index}" class="emojis__type ariaLabel" aria-label="${title}">${unicode2Emoji(unicode)}</button>`
++                ).join("")}
+ </div>
+ </div>`;
+-            lazyLoadEmoji(this.element);
+-            lazyLoadEmojiImg(this.element);
+-        }
+-        const firstEmojiElement = this.element.querySelector(".emojis__item");
+-        if (firstEmojiElement) {
+-            firstEmojiElement.classList.add("emojis__item--current");
+-            this.element.classList.remove("fn__none");
+-            const textareaPosition = getSelectionPosition(protyle.wysiwyg.element);
+-            setPosition(this.element, textareaPosition.left, textareaPosition.top + 26, 30);
+-            this.element.querySelector(".emojis__panel").scrollTop = 0;
+-        } else {
+-            this.element.classList.add("fn__none");
++                lazyLoadEmoji(this.element);
++                lazyLoadEmojiImg(this.element);
++            }).then(afterEmojiPanelInit)
+         }
+     }
+ 
 diff --git a/app/src/types/config.d.ts b/app/src/types/config.d.ts
 index be656bd5a..162a3b8c0 100644
 --- a/app/src/types/config.d.ts
