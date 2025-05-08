@@ -51,7 +51,7 @@ index acdac0d50..6eebb38a2 100644
      onSetappearance(data: Config.IAppearance) {
          if (data.lang !== window.siyuan.config.appearance.lang) {
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..f78b770e5 100644
+index df3f8baf7..f4e9b3532 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
 @@ -1,276 +1,490 @@
@@ -771,7 +771,7 @@ index df3f8baf7..f78b770e5 100644
      </div>
      <div class="emojis__tabbody">
          <div class="fn__none" data-type="tab-emoji">
-@@ -279,481 +493,974 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -279,481 +493,984 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="fn__space"></span>
                  <label class="b3-form__icon fn__flex-1" style="overflow:initial;">
                      <svg class="b3-form__icon-icon"><use xlink:href="#iconSearch"></use></svg>
@@ -1167,7 +1167,11 @@ index df3f8baf7..f78b770e5 100644
 +          } catch (error) {
 +            console.error("Failed to process external icon:", error);
 +          }
-+        }
+         }
+-        emojisContentElement.scrollTop = 0;
+-        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
+-        if (emojiSearchInputElement.value === "") {
+-            lazyLoadEmoji(dialog.element);
 +
 +        if (type === "notebook") {
 +          fetchPost(
@@ -1197,18 +1201,19 @@ index df3f8baf7..f78b770e5 100644
 +            }
 +          );
          }
--        emojisContentElement.scrollTop = 0;
--        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
--        if (emojiSearchInputElement.value === "") {
--            lazyLoadEmoji(dialog.element);
-+        if (callback) {
-+          callback(unicode);
-         }
 -        lazyLoadEmojiImg(dialog.element);
 -    });
 -    emojiSearchInputElement.addEventListener("input", (event: InputEvent) => {
 -        if (event.isComposing) {
 -            return;
++        if (callback) {
++          callback(unicode);
+         }
+-        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
+-        if (emojiSearchInputElement.value) {
+-            emojisContentElement.nextElementSibling.classList.add("fn__none");
+-        } else {
+-            emojisContentElement.nextElementSibling.classList.remove("fn__none");
 +        event.preventDefault();
 +        event.stopPropagation();
 +        return;
@@ -1232,9 +1237,10 @@ index df3f8baf7..f78b770e5 100644
 +          event.preventDefault();
 +          event.stopPropagation();
          }
--        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
--        if (emojiSearchInputElement.value) {
--            emojisContentElement.nextElementSibling.classList.add("fn__none");
+-        emojisContentElement.scrollTop = 0;
+-        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
+-        if (emojiSearchInputElement.value === "") {
+-            lazyLoadEmoji(dialog.element);
 +      } else if (event.key === "ArrowRight") {
 +        if (currentElement.nextElementSibling) {
 +          currentElement.classList.remove("emojis__item--current");
@@ -1249,7 +1255,12 @@ index df3f8baf7..f78b770e5 100644
 +            .nextElementSibling.firstElementChild as HTMLElement;
 +          event.preventDefault();
 +          event.stopPropagation();
-+        }
+         }
+-        lazyLoadEmojiImg(dialog.element);
+-    });
+-    emojiSearchInputElement.addEventListener("keydown", (event: KeyboardEvent) => {
+-        if (event.isComposing) {
+-            return;
 +      } else if (event.key === "ArrowDown") {
 +        if (!currentElement.nextElementSibling) {
 +          const nextContentElement =
@@ -1259,8 +1270,7 @@ index df3f8baf7..f78b770e5 100644
 +              nextContentElement.firstElementChild as HTMLElement;
 +            currentElement.classList.remove("emojis__item--current");
 +          }
-         } else {
--            emojisContentElement.nextElementSibling.classList.remove("fn__none");
++        } else {
 +          currentElement.classList.remove("emojis__item--current");
 +          let counter = Math.floor(
 +            currentElement.parentElement.clientWidth /
@@ -1273,10 +1283,8 @@ index df3f8baf7..f78b770e5 100644
 +            counter--;
 +          }
          }
--        emojisContentElement.scrollTop = 0;
--        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
--        if (emojiSearchInputElement.value === "") {
--            lazyLoadEmoji(dialog.element);
+-        if (event.key.indexOf("Arrow") === -1 && event.key !== "Enter") {
+-            return;
 +        event.preventDefault();
 +        event.stopPropagation();
 +      } else if (event.key === "ArrowUp") {
@@ -1302,10 +1310,8 @@ index df3f8baf7..f78b770e5 100644
 +            counter--;
 +          }
          }
--        lazyLoadEmojiImg(dialog.element);
--    });
--    emojiSearchInputElement.addEventListener("keydown", (event: KeyboardEvent) => {
--        if (event.isComposing) {
+-        const currentElement: HTMLElement = dialog.element.querySelector(".emojis__item--current");
+-        if (!currentElement) {
 -            return;
 +        event.preventDefault();
 +        event.stopPropagation();
@@ -1332,58 +1338,6 @@ index df3f8baf7..f78b770e5 100644
 +            emojisContentElement.clientHeight +
 +            newCurrentElement.clientHeight;
          }
--        if (event.key.indexOf("Arrow") === -1 && event.key !== "Enter") {
--            return;
-+      }
-+    }
-+  );
-+  if (!isMobile() && currentTab === "emoji") {
-+    emojiSearchInputElement.focus();
-+  }
-+  lazyLoadEmoji(dialog.element);
-+  lazyLoadEmojiImg(dialog.element);
-+  // 不能使用 getEventName 否则 https://github.com/siyuan-note/siyuan/issues/5472
-+  dialog.element.addEventListener("click", async (event) => {
-+    let target = event.target as HTMLElement;
-+    while (target && target !== dialog.element) {
-+      if (target.classList.contains("emojis__item")) {
-+        let unicode = target.getAttribute("data-unicode");
-+
-+        // Handle external icons
-+        if (unicode.startsWith("external-")) {
-+          const downloadUrl = target.getAttribute("data-download-url");
-+          try {
-+            const iconId = unicode.replace("external-", "");
-+            const assetPath = await downloadAndStoreIcon(downloadUrl, iconId);
-+            if (assetPath) {
-+              unicode = assetPath.replace("emojis/", "").replace(/^\//, "");
-+            }
-+            // unicode = assetPath; // emojis/external/external-653276-20250508012313-7g2kc0m.png
-+          } catch (error) {
-+            console.error("Failed to process external icon:", error);
-+            break;
-+          }
-         }
--        const currentElement: HTMLElement = dialog.element.querySelector(".emojis__item--current");
--        if (!currentElement) {
--            return;
-+
-+        dialog.destroy();
-+
-+        if (type === "notebook") {
-+          await fetchPost("/api/notebook/setNotebookIcon", {
-+            notebook: id,
-+            icon: unicode,
-+          });
-+          updateFileTreeEmoji(unicode, id, "iconFilesRoot");
-+        } else if (type === "doc") {
-+          await fetchPost("/api/attr/setBlockAttrs", {
-+            id,
-+            attrs: { icon: unicode },
-+          });
-+          updateFileTreeEmoji(unicode, id);
-+          updateOutlineEmoji(unicode, id);
-         }
 -        if (event.key === "Enter") {
 -            const unicode = currentElement.getAttribute("data-unicode");
 -            if (type === "notebook") {
@@ -1408,13 +1362,55 @@ index df3f8baf7..f78b770e5 100644
 -            }
 -            if (callback) {
 -                callback(unicode);
--            }
++      }
++    }
++  );
++  if (!isMobile() && currentTab === "emoji") {
++    emojiSearchInputElement.focus();
++  }
++  lazyLoadEmoji(dialog.element);
++  lazyLoadEmojiImg(dialog.element);
++  // 不能使用 getEventName 否则 https://github.com/siyuan-note/siyuan/issues/5472
++  dialog.element.addEventListener("click", async (event) => {
++    let target = event.target as HTMLElement;
++    while (target && target !== dialog.element) {
++      if (target.classList.contains("emojis__item")) {
++        let unicode = target.getAttribute("data-unicode");
++
++        // Handle external icons
++        if (unicode.startsWith("external-")) {
++          const downloadUrl = target.getAttribute("data-download-url");
++          try {
++            const iconId = unicode.replace("external-", "");
++            const assetPath = await downloadAndStoreIcon(downloadUrl, iconId);
++            if (assetPath) {
++              unicode = assetPath.replace("emojis/", "").replace(/^\//, "");
+             }
 -            event.preventDefault();
 -            event.stopPropagation();
 -            return;
++            // unicode = assetPath; // emojis/external/external-653276-20250508012313-7g2kc0m.png
++          } catch (error) {
++            console.error("Failed to process external icon:", error);
++            break;
++          }
++        }
 +
-+        if (callback) {
-+          callback(unicode);
++        dialog.destroy();
++
++        if (type === "notebook") {
++          await fetchPost("/api/notebook/setNotebookIcon", {
++            notebook: id,
++            icon: unicode,
++          });
++          updateFileTreeEmoji(unicode, id, "iconFilesRoot");
++        } else if (type === "doc") {
++          await fetchPost("/api/attr/setBlockAttrs", {
++            id,
++            attrs: { icon: unicode },
++          });
++          updateFileTreeEmoji(unicode, id);
++          updateOutlineEmoji(unicode, id);
          }
 -        let newCurrentElement: HTMLElement;
 -        if (event.key === "ArrowLeft") {
@@ -1428,6 +1424,10 @@ index df3f8baf7..f78b770e5 100644
 -                newCurrentElement = currentElement.parentElement.previousElementSibling.previousElementSibling.lastElementChild as HTMLElement;
 -                event.preventDefault();
 -                event.stopPropagation();
++
++        if (callback) {
++          callback(unicode);
++        }
 +        addEmoji(unicode);
 +        break;
 +      } else if (target.getAttribute("data-action") === "remove") {
@@ -1518,8 +1518,7 @@ index df3f8baf7..f78b770e5 100644
 -                    newCurrentElement = newCurrentElement.previousElementSibling as HTMLElement;
 -                    counter--;
 -                }
-+              item.classList.add("fn__none");
-             }
+-            }
 -            event.preventDefault();
 -            event.stopPropagation();
 -        }
@@ -1530,7 +1529,8 @@ index df3f8baf7..f78b770e5 100644
 -                emojisContentElement.scrollTop = newCurrentElement.offsetTop - inputHeight - 6;
 -            } else if (newCurrentElement.offsetTop - inputHeight - emojisContentElement.clientHeight + newCurrentElement.clientHeight > emojisContentElement.scrollTop) {
 -                emojisContentElement.scrollTop = newCurrentElement.offsetTop - inputHeight - emojisContentElement.clientHeight + newCurrentElement.clientHeight;
--            }
++              item.classList.add("fn__none");
+             }
 -        }
 -    });
 -    if (!isMobile() && currentTab === "emoji") {
@@ -1962,10 +1962,14 @@ index df3f8baf7..f78b770e5 100644
 +    };
 +  } else {
 +    const icon8Icon = icon as IIcon8ResponseIcon;
-+    
++
 +    return {
-+      downloadUrl: `https://img.icons8.com/?id=${icon8Icon.id}&format=png&size=${targetSize}&name=icons8-${icon8Icon.name.toLowerCase()}-${targetSize}.png&fromSite=true`,
-+      previewUrl: `https://img.icons8.com/?id=${icon8Icon.id}&format=png&size=${targetSize}&name=icons8-${icon8Icon.name.toLowerCase()}-${targetSize}.png&fromSite=true`,
++      downloadUrl: `https://img.icons8.com/?id=${
++        icon8Icon.id
++      }&format=png&size=${targetSize}&name=icons8-${icon8Icon.name.toLowerCase()}-${targetSize}.png&fromSite=true`,
++      previewUrl: `https://img.icons8.com/?id=${
++        icon8Icon.id
++      }&format=png&size=${targetSize}&name=icons8-${icon8Icon.name.toLowerCase()}-${targetSize}.png&fromSite=true`,
 +    };
 +  }
 +}
@@ -2041,7 +2045,13 @@ index df3f8baf7..f78b770e5 100644
 +    const data: IIcon8Response = await response.json();
 +
 +    // Filter non-premium icons
-+    const nonPremiumIcons = data.icons.filter((icon) => !icon.isFree);
++    const nonPremiumIcons = data.icons.filter((icon) => {
++      if ("free" in icon && icon.free !== null) {
++        return icon.free === true;
++      } else {
++        return true;
++      }
++    });
 +
 +    const icons = nonPremiumIcons.map((icon): IEmojiItem => {
 +      const urls = getIconUrls(icon);
@@ -2158,7 +2168,7 @@ index be656bd5a..3613073f2 100644
           * List of installed light themes
           */
 diff --git a/app/src/types/index.d.ts b/app/src/types/index.d.ts
-index 146039d74..2dce72454 100644
+index 146039d74..76edaf94d 100644
 --- a/app/src/types/index.d.ts
 +++ b/app/src/types/index.d.ts
 @@ -396,6 +396,73 @@ interface IEmoji {
@@ -2209,7 +2219,7 @@ index 146039d74..2dce72454 100644
 +  category: string;
 +  subcategory?: string;
 +  platform: string;
-+  isFree: boolean;
++  free?: boolean;
 +  isColor: boolean;
 +  isExplicit: boolean;
 +  authorApiCode: string;
