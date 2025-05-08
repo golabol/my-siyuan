@@ -39,10 +39,10 @@ index acdac0d50..5cbf8339c 100644
      onSetappearance(data: Config.IAppearance) {
          if (data.lang !== window.siyuan.config.appearance.lang) {
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..97b02e5ba 100644
+index df3f8baf7..3438d14d7 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
-@@ -1,276 +1,487 @@
+@@ -1,276 +1,450 @@
 -import {getRandom, isMobile} from "../util/functions";
 -import {fetchPost} from "../util/fetch";
 -import {Constants} from "../constants";
@@ -67,43 +67,6 @@ index df3f8baf7..97b02e5ba 100644
 +import { setStorageVal } from "../protyle/util/compatibility";
  import * as dayjs from "dayjs";
  
-+interface IIconFinderResponseIcon {
-+  icon_id: number;
-+  tags: string[];
-+  published_at: string;
-+  is_premium: boolean;
-+  type: string;
-+  containers: any[];
-+  raster_sizes: Array<{
-+    formats: Array<{
-+      format: string;
-+      preview_url: string;
-+      download_url: string;
-+    }>;
-+    size: number;
-+    size_width: number;
-+    size_height: number;
-+  }>;
-+  vector_sizes: Array<{
-+    formats: Array<{
-+      format: string;
-+      download_url: string;
-+    }>;
-+    target_sizes: number[][];
-+    size: number;
-+    size_width: number;
-+    size_height: number;
-+  }>;
-+  styles: any[];
-+  categories: any[];
-+  is_icon_glyph: boolean;
-+}
-+
-+interface IIconFinderResponse {
-+  total_count: number;
-+  icons: Array<IIconFinderResponseIcon>;
-+}
-+
 +// Add debounce utility
 +function debounce<T extends (...args: any[]) => any>(
 +  func: T,
@@ -755,7 +718,7 @@ index df3f8baf7..97b02e5ba 100644
      </div>
      <div class="emojis__tabbody">
          <div class="fn__none" data-type="tab-emoji">
-@@ -279,481 +490,924 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -279,481 +453,928 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="fn__space"></span>
                  <label class="b3-form__icon fn__flex-1" style="overflow:initial;">
                      <svg class="b3-form__icon-icon"><use xlink:href="#iconSearch"></use></svg>
@@ -1144,7 +1107,9 @@ index df3f8baf7..97b02e5ba 100644
 +          try {
 +            const iconId = unicode.replace("external-", "");
 +            const assetPath = await downloadAndStoreIcon(downloadUrl, iconId);
-+            unicode = `external/external-${iconId}.png`;
++            if (assetPath) {
++              unicode = assetPath.replace("emojis/", "").replace(/^\//, "");
++            }
 +            // unicode = assetPath; // emojis/external/external-653276-20250508012313-7g2kc0m.png
 +          } catch (error) {
 +            console.error("Failed to process external icon:", error);
@@ -1194,6 +1159,8 @@ index df3f8baf7..97b02e5ba 100644
 -        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
 -        if (emojiSearchInputElement.value) {
 -            emojisContentElement.nextElementSibling.classList.add("fn__none");
+-        } else {
+-            emojisContentElement.nextElementSibling.classList.remove("fn__none");
 +        event.preventDefault();
 +        event.stopPropagation();
 +        return;
@@ -1216,7 +1183,11 @@ index df3f8baf7..97b02e5ba 100644
 +            .lastElementChild as HTMLElement;
 +          event.preventDefault();
 +          event.stopPropagation();
-+        }
+         }
+-        emojisContentElement.scrollTop = 0;
+-        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
+-        if (emojiSearchInputElement.value === "") {
+-            lazyLoadEmoji(dialog.element);
 +      } else if (event.key === "ArrowRight") {
 +        if (currentElement.nextElementSibling) {
 +          currentElement.classList.remove("emojis__item--current");
@@ -1231,7 +1202,12 @@ index df3f8baf7..97b02e5ba 100644
 +            .nextElementSibling.firstElementChild as HTMLElement;
 +          event.preventDefault();
 +          event.stopPropagation();
-+        }
+         }
+-        lazyLoadEmojiImg(dialog.element);
+-    });
+-    emojiSearchInputElement.addEventListener("keydown", (event: KeyboardEvent) => {
+-        if (event.isComposing) {
+-            return;
 +      } else if (event.key === "ArrowDown") {
 +        if (!currentElement.nextElementSibling) {
 +          const nextContentElement =
@@ -1241,8 +1217,7 @@ index df3f8baf7..97b02e5ba 100644
 +              nextContentElement.firstElementChild as HTMLElement;
 +            currentElement.classList.remove("emojis__item--current");
 +          }
-         } else {
--            emojisContentElement.nextElementSibling.classList.remove("fn__none");
++        } else {
 +          currentElement.classList.remove("emojis__item--current");
 +          let counter = Math.floor(
 +            currentElement.parentElement.clientWidth /
@@ -1255,10 +1230,8 @@ index df3f8baf7..97b02e5ba 100644
 +            counter--;
 +          }
          }
--        emojisContentElement.scrollTop = 0;
--        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
--        if (emojiSearchInputElement.value === "") {
--            lazyLoadEmoji(dialog.element);
+-        if (event.key.indexOf("Arrow") === -1 && event.key !== "Enter") {
+-            return;
 +        event.preventDefault();
 +        event.stopPropagation();
 +      } else if (event.key === "ArrowUp") {
@@ -1284,10 +1257,8 @@ index df3f8baf7..97b02e5ba 100644
 +            counter--;
 +          }
          }
--        lazyLoadEmojiImg(dialog.element);
--    });
--    emojiSearchInputElement.addEventListener("keydown", (event: KeyboardEvent) => {
--        if (event.isComposing) {
+-        const currentElement: HTMLElement = dialog.element.querySelector(".emojis__item--current");
+-        if (!currentElement) {
 -            return;
 +        event.preventDefault();
 +        event.stopPropagation();
@@ -1314,56 +1285,6 @@ index df3f8baf7..97b02e5ba 100644
 +            emojisContentElement.clientHeight +
 +            newCurrentElement.clientHeight;
          }
--        if (event.key.indexOf("Arrow") === -1 && event.key !== "Enter") {
--            return;
-+      }
-+    }
-+  );
-+  if (!isMobile() && currentTab === "emoji") {
-+    emojiSearchInputElement.focus();
-+  }
-+  lazyLoadEmoji(dialog.element);
-+  lazyLoadEmojiImg(dialog.element);
-+  // 不能使用 getEventName 否则 https://github.com/siyuan-note/siyuan/issues/5472
-+  dialog.element.addEventListener("click", async (event) => {
-+    let target = event.target as HTMLElement;
-+    while (target && target !== dialog.element) {
-+      if (target.classList.contains("emojis__item")) {
-+        let unicode = target.getAttribute("data-unicode");
-+
-+        // Handle external icons
-+        if (unicode.startsWith("external-")) {
-+          const downloadUrl = target.getAttribute("data-download-url");
-+          try {
-+            const iconId = unicode.replace("external-", "");
-+            const assetPath = await downloadAndStoreIcon(downloadUrl, iconId);
-+            unicode = `external/external-${iconId}.png`;
-+            // unicode = assetPath; // emojis/external/external-653276-20250508012313-7g2kc0m.png
-+          } catch (error) {
-+            console.error("Failed to process external icon:", error);
-+            break;
-+          }
-         }
--        const currentElement: HTMLElement = dialog.element.querySelector(".emojis__item--current");
--        if (!currentElement) {
--            return;
-+
-+        dialog.destroy();
-+
-+        if (type === "notebook") {
-+          await fetchPost("/api/notebook/setNotebookIcon", {
-+            notebook: id,
-+            icon: unicode,
-+          });
-+          updateFileTreeEmoji(unicode, id, "iconFilesRoot");
-+        } else if (type === "doc") {
-+          await fetchPost("/api/attr/setBlockAttrs", {
-+            id,
-+            attrs: { icon: unicode },
-+          });
-+          updateFileTreeEmoji(unicode, id);
-+          updateOutlineEmoji(unicode, id);
-         }
 -        if (event.key === "Enter") {
 -            const unicode = currentElement.getAttribute("data-unicode");
 -            if (type === "notebook") {
@@ -1388,10 +1309,56 @@ index df3f8baf7..97b02e5ba 100644
 -            }
 -            if (callback) {
 -                callback(unicode);
--            }
++      }
++    }
++  );
++  if (!isMobile() && currentTab === "emoji") {
++    emojiSearchInputElement.focus();
++  }
++  lazyLoadEmoji(dialog.element);
++  lazyLoadEmojiImg(dialog.element);
++  // 不能使用 getEventName 否则 https://github.com/siyuan-note/siyuan/issues/5472
++  dialog.element.addEventListener("click", async (event) => {
++    let target = event.target as HTMLElement;
++    while (target && target !== dialog.element) {
++      if (target.classList.contains("emojis__item")) {
++        let unicode = target.getAttribute("data-unicode");
++
++        // Handle external icons
++        if (unicode.startsWith("external-")) {
++          const downloadUrl = target.getAttribute("data-download-url");
++          try {
++            const iconId = unicode.replace("external-", "");
++            const assetPath = await downloadAndStoreIcon(downloadUrl, iconId);
++            if (assetPath) {
++              unicode = assetPath.replace("emojis/", "").replace(/^\//, "");
+             }
 -            event.preventDefault();
 -            event.stopPropagation();
 -            return;
++            // unicode = assetPath; // emojis/external/external-653276-20250508012313-7g2kc0m.png
++          } catch (error) {
++            console.error("Failed to process external icon:", error);
++            break;
++          }
++        }
++
++        dialog.destroy();
++
++        if (type === "notebook") {
++          await fetchPost("/api/notebook/setNotebookIcon", {
++            notebook: id,
++            icon: unicode,
++          });
++          updateFileTreeEmoji(unicode, id, "iconFilesRoot");
++        } else if (type === "doc") {
++          await fetchPost("/api/attr/setBlockAttrs", {
++            id,
++            attrs: { icon: unicode },
++          });
++          updateFileTreeEmoji(unicode, id);
++          updateOutlineEmoji(unicode, id);
++        }
 +
 +        if (callback) {
 +          callback(unicode);
@@ -2088,6 +2055,54 @@ index be656bd5a..3647c9ab4 100644
          /**
           * List of installed light themes
           */
+diff --git a/app/src/types/index.d.ts b/app/src/types/index.d.ts
+index 146039d74..ef854172d 100644
+--- a/app/src/types/index.d.ts
++++ b/app/src/types/index.d.ts
+@@ -396,6 +396,43 @@ interface IEmoji {
+     items: IEmojiItem[]
+ }
+ 
++interface IIconFinderResponseIcon {
++  icon_id: number;
++  tags: string[];
++  published_at: string;
++  is_premium: boolean;
++  type: string;
++  containers: any[];
++  raster_sizes: Array<{
++    formats: Array<{
++      format: string;
++      preview_url: string;
++      download_url: string;
++    }>;
++    size: number;
++    size_width: number;
++    size_height: number;
++  }>;
++  vector_sizes: Array<{
++    formats: Array<{
++      format: string;
++      download_url: string;
++    }>;
++    target_sizes: number[][];
++    size: number;
++    size_width: number;
++    size_height: number;
++  }>;
++  styles: any[];
++  categories: any[];
++  is_icon_glyph: boolean;
++}
++
++interface IIconFinderResponse {
++  total_count: number;
++  icons: Array<IIconFinderResponseIcon>;
++}
++
+ interface INotebook {
+     name: string
+     id: string
 diff --git a/kernel/conf/appearance.go b/kernel/conf/appearance.go
 index ebd1002ac..7627c7324 100644
 --- a/kernel/conf/appearance.go
