@@ -76,7 +76,7 @@ index dc2e37fdd..36ee5250e 100644
                      icon: "iconFiles",
                      hotkeyLangId: "fileTree",
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..cae0f3ec7 100644
+index df3f8baf7..cbac27fce 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
 @@ -1,276 +1,535 @@
@@ -319,10 +319,29 @@ index df3f8baf7..cae0f3ec7 100644
 -    window.siyuan.emojis.forEach((category, index) => {
 -        if (!key) {
 -            html += `<div class="emojis__title" data-type="${index + 1}">${getEmojiTitle(index)}</div><div style="min-height:${index === 0 ? "30px" : "300px"}" class="emojis__content"${index > 1 ? ' data-index="' + index + '"' : ""}>`;
--        }
++    if (category.items.length === 0 && index === 0 && !key) {
++      html += `<div style="margin-left: 4px">${window.siyuan.languages.setEmojiTip}</div>`;
++    }
++
++    category.items.forEach((emoji) => {
++      if (key) {
++        if (
++          window.siyuan.config.editor.emoji.includes(emoji.unicode) &&
++          (unicode2Emoji(emoji.unicode) === key ||
++            emoji.keywords.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
++            emoji.description.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
++            emoji.description_zh_cn.toLowerCase().indexOf(key.toLowerCase()) >
++              -1 ||
++            emoji.description_ja_jp.toLowerCase().indexOf(key.toLowerCase()) >
++              -1)
++        ) {
++          recentEmojis.push(emoji);
+         }
 -        if (category.items.length === 0 && index === 0 && !key) {
 -            html += `<div style="margin-left: 4px">${window.siyuan.languages.setEmojiTip}</div>`;
--        }
++        if (max && maxCount > max) {
++          return;
+         }
 -
 -        category.items.forEach(emoji => {
 -            if (key) {
@@ -347,27 +366,6 @@ index df3f8baf7..cae0f3ec7 100644
 -                        customStore.push(emoji);
 -                    } else {
 -                        keyHTML += `<button data-unicode="${emoji.unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(emoji)}">
-+    if (category.items.length === 0 && index === 0 && !key) {
-+      html += `<div style="margin-left: 4px">${window.siyuan.languages.setEmojiTip}</div>`;
-+    }
-+
-+    category.items.forEach((emoji) => {
-+      if (key) {
-+        if (
-+          window.siyuan.config.editor.emoji.includes(emoji.unicode) &&
-+          (unicode2Emoji(emoji.unicode) === key ||
-+            emoji.keywords.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
-+            emoji.description.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
-+            emoji.description_zh_cn.toLowerCase().indexOf(key.toLowerCase()) >
-+              -1 ||
-+            emoji.description_ja_jp.toLowerCase().indexOf(key.toLowerCase()) >
-+              -1)
-+        ) {
-+          recentEmojis.push(emoji);
-+        }
-+        if (max && maxCount > max) {
-+          return;
-+        }
 +        if (
 +          unicode2Emoji(emoji.unicode) === key ||
 +          emoji.keywords.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
@@ -842,7 +840,7 @@ index df3f8baf7..cae0f3ec7 100644
      </div>
      <div class="emojis__tabbody">
          <div class="fn__none" data-type="tab-emoji">
-@@ -279,481 +538,1122 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -279,481 +538,1095 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="fn__space"></span>
                  <label class="b3-form__icon fn__flex-1" style="overflow:initial;">
                      <svg class="b3-form__icon-icon"><use xlink:href="#iconSearch"></use></svg>
@@ -1238,7 +1236,11 @@ index df3f8baf7..cae0f3ec7 100644
 +          } catch (error) {
 +            console.error("Failed to process external icon:", error);
 +          }
-+        }
+         }
+-        emojisContentElement.scrollTop = 0;
+-        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
+-        if (emojiSearchInputElement.value === "") {
+-            lazyLoadEmoji(dialog.element);
 +
 +        if (type === "notebook") {
 +          fetchPost(
@@ -1268,18 +1270,19 @@ index df3f8baf7..cae0f3ec7 100644
 +            }
 +          );
          }
--        emojisContentElement.scrollTop = 0;
--        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
--        if (emojiSearchInputElement.value === "") {
--            lazyLoadEmoji(dialog.element);
-+        if (callback) {
-+          callback(unicode);
-         }
 -        lazyLoadEmojiImg(dialog.element);
 -    });
 -    emojiSearchInputElement.addEventListener("input", (event: InputEvent) => {
 -        if (event.isComposing) {
 -            return;
++        if (callback) {
++          callback(unicode);
+         }
+-        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
+-        if (emojiSearchInputElement.value) {
+-            emojisContentElement.nextElementSibling.classList.add("fn__none");
+-        } else {
+-            emojisContentElement.nextElementSibling.classList.remove("fn__none");
 +        event.preventDefault();
 +        event.stopPropagation();
 +        return;
@@ -1302,7 +1305,11 @@ index df3f8baf7..cae0f3ec7 100644
 +            .lastElementChild as HTMLElement;
 +          event.preventDefault();
 +          event.stopPropagation();
-+        }
+         }
+-        emojisContentElement.scrollTop = 0;
+-        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
+-        if (emojiSearchInputElement.value === "") {
+-            lazyLoadEmoji(dialog.element);
 +      } else if (event.key === "ArrowRight") {
 +        if (currentElement.nextElementSibling) {
 +          currentElement.classList.remove("emojis__item--current");
@@ -1318,9 +1325,11 @@ index df3f8baf7..cae0f3ec7 100644
 +          event.preventDefault();
 +          event.stopPropagation();
          }
--        emojisContentElement.innerHTML = filterEmoji(emojiSearchInputElement.value);
--        if (emojiSearchInputElement.value) {
--            emojisContentElement.nextElementSibling.classList.add("fn__none");
+-        lazyLoadEmojiImg(dialog.element);
+-    });
+-    emojiSearchInputElement.addEventListener("keydown", (event: KeyboardEvent) => {
+-        if (event.isComposing) {
+-            return;
 +      } else if (event.key === "ArrowDown") {
 +        if (!currentElement.nextElementSibling) {
 +          const nextContentElement =
@@ -1330,8 +1339,7 @@ index df3f8baf7..cae0f3ec7 100644
 +              nextContentElement.firstElementChild as HTMLElement;
 +            currentElement.classList.remove("emojis__item--current");
 +          }
-         } else {
--            emojisContentElement.nextElementSibling.classList.remove("fn__none");
++        } else {
 +          currentElement.classList.remove("emojis__item--current");
 +          let counter = Math.floor(
 +            currentElement.parentElement.clientWidth /
@@ -1344,10 +1352,8 @@ index df3f8baf7..cae0f3ec7 100644
 +            counter--;
 +          }
          }
--        emojisContentElement.scrollTop = 0;
--        dialog.element.querySelector(".emojis__item")?.classList.add("emojis__item--current");
--        if (emojiSearchInputElement.value === "") {
--            lazyLoadEmoji(dialog.element);
+-        if (event.key.indexOf("Arrow") === -1 && event.key !== "Enter") {
+-            return;
 +        event.preventDefault();
 +        event.stopPropagation();
 +      } else if (event.key === "ArrowUp") {
@@ -1373,43 +1379,9 @@ index df3f8baf7..cae0f3ec7 100644
 +            counter--;
 +          }
          }
--        lazyLoadEmojiImg(dialog.element);
--    });
--    emojiSearchInputElement.addEventListener("keydown", (event: KeyboardEvent) => {
--        if (event.isComposing) {
--            return;
--        }
--        if (event.key.indexOf("Arrow") === -1 && event.key !== "Enter") {
--            return;
--        }
 -        const currentElement: HTMLElement = dialog.element.querySelector(".emojis__item--current");
 -        if (!currentElement) {
 -            return;
--        }
--        if (event.key === "Enter") {
--            const unicode = currentElement.getAttribute("data-unicode");
--            if (type === "notebook") {
--                fetchPost("/api/notebook/setNotebookIcon", {
--                    notebook: id,
--                    icon: unicode
--                }, () => {
--                    dialog.destroy();
--                    addEmoji(unicode);
--                    updateFileTreeEmoji(unicode, id, "iconFilesRoot");
--                });
--            } else if (type === "doc") {
--                fetchPost("/api/attr/setBlockAttrs", {
--                    id,
--                    attrs: {"icon": unicode}
--                }, () => {
--                    dialog.destroy();
--                    addEmoji(unicode);
--                    updateFileTreeEmoji(unicode, id);
--                    updateOutlineEmoji(unicode, id);
--                });
--            }
--            if (callback) {
--                callback(unicode);
 +        event.preventDefault();
 +        event.stopPropagation();
 +      }
@@ -1434,7 +1406,35 @@ index df3f8baf7..cae0f3ec7 100644
 +            inputHeight -
 +            emojisContentElement.clientHeight +
 +            newCurrentElement.clientHeight;
-+        }
+         }
+-        if (event.key === "Enter") {
+-            const unicode = currentElement.getAttribute("data-unicode");
+-            if (type === "notebook") {
+-                fetchPost("/api/notebook/setNotebookIcon", {
+-                    notebook: id,
+-                    icon: unicode
+-                }, () => {
+-                    dialog.destroy();
+-                    addEmoji(unicode);
+-                    updateFileTreeEmoji(unicode, id, "iconFilesRoot");
+-                });
+-            } else if (type === "doc") {
+-                fetchPost("/api/attr/setBlockAttrs", {
+-                    id,
+-                    attrs: {"icon": unicode}
+-                }, () => {
+-                    dialog.destroy();
+-                    addEmoji(unicode);
+-                    updateFileTreeEmoji(unicode, id);
+-                    updateOutlineEmoji(unicode, id);
+-                });
+-            }
+-            if (callback) {
+-                callback(unicode);
+-            }
+-            event.preventDefault();
+-            event.stopPropagation();
+-            return;
 +      }
 +    }
 +  );
@@ -1447,111 +1447,7 @@ index df3f8baf7..cae0f3ec7 100644
 +  dialog.element.addEventListener("click", async (event) => {
 +    let target = event.target as HTMLElement;
 +    while (target && target !== dialog.element) {
-+      if (target.classList.contains("emojis__item")) {
-+        let unicode = target.getAttribute("data-unicode");
-+
-+        // Handle external icons
-+        if (unicode.startsWith("external-")) {
-+          const downloadUrl = target.getAttribute("data-download-url");
-+          try {
-+            const iconId = unicode.replace("external-", "");
-+            const assetPath = await downloadAndStoreIcon(downloadUrl, iconId);
-+            if (assetPath) {
-+              unicode = assetPath.replace("emojis/", "").replace(/^\//, "");
-             }
--            event.preventDefault();
--            event.stopPropagation();
--            return;
--        }
--        let newCurrentElement: HTMLElement;
--        if (event.key === "ArrowLeft") {
--            if (currentElement.previousElementSibling) {
--                currentElement.classList.remove("emojis__item--current");
--                newCurrentElement = currentElement.previousElementSibling as HTMLElement;
--                event.preventDefault();
--                event.stopPropagation();
--            } else if (currentElement.parentElement.previousElementSibling?.previousElementSibling) {
--                currentElement.classList.remove("emojis__item--current");
--                newCurrentElement = currentElement.parentElement.previousElementSibling.previousElementSibling.lastElementChild as HTMLElement;
--                event.preventDefault();
--                event.stopPropagation();
-+            // unicode = assetPath; // emojis/external/external-653276-20250508012313-7g2kc0m.png
-+          } catch (error) {
-+            console.error("Failed to process external icon:", error);
-+            break;
-+          }
-+        }
-+
-+        dialog.destroy();
-+
-+        if (type === "notebook") {
-+          await fetchPost("/api/notebook/setNotebookIcon", {
-+            notebook: id,
-+            icon: unicode,
-+          });
-+          updateFileTreeEmoji(unicode, id, "iconFilesRoot");
-+        } else if (type === "doc") {
-+          await fetchPost("/api/attr/setBlockAttrs", {
-+            id,
-+            attrs: { icon: unicode },
-+          });
-+          updateFileTreeEmoji(unicode, id);
-+          updateOutlineEmoji(unicode, id);
-+        }
-+
-+        if (callback) {
-+          callback(unicode);
-+        }
-+        addEmoji(unicode);
-+        break;
-+      } else if (target.classList.contains("emoji__dynamic-item")) {
-+        let unicode = target.getAttribute("src");
-+        dialog.destroy();
-+
-+        if (type === "notebook") {
-+          await fetchPost("/api/notebook/setNotebookIcon", {
-+            notebook: id,
-+            icon: unicode,
-+          });
-+          updateFileTreeEmoji(unicode, id, "iconFilesRoot");
-+        } else if (type === "doc") {
-+          await fetchPost("/api/attr/setBlockAttrs", {
-+            id,
-+            attrs: { icon: unicode },
-+          });
-+          updateFileTreeEmoji(unicode, id);
-+          updateOutlineEmoji(unicode, id);
-+        }
-+
-+        if (callback) {
-+          callback(unicode);
-+        }
-+        addEmoji(unicode);
-+        break;
-+      } else if (target.getAttribute("data-action") === "random") {
-+        let unicode = getRandomEmoji();
-+
-+        if (type === "notebook") {
-+          await fetchPost("/api/notebook/setNotebookIcon", {
-+            notebook: id,
-+            icon: unicode,
-+          });
-+          updateFileTreeEmoji(unicode, id, "iconFilesRoot");
-+        } else if (type === "doc") {
-+          await fetchPost("/api/attr/setBlockAttrs", {
-+            id,
-+            attrs: { icon: unicode },
-+          });
-+          updateFileTreeEmoji(unicode, id);
-+          updateOutlineEmoji(unicode, id);
-+        }
-+
-+        if (callback) {
-+          callback(unicode);
-+        }
-+        addEmoji(unicode);
-+        break;
-+      } else if (target.classList.contains("emojis__type")) {
++      if (target.classList.contains("emojis__type")) {
 +        const titleElement = emojisContentElement.querySelector(
 +          `[data-type="${target.getAttribute("data-type")}"]`
 +        ) as HTMLElement;
@@ -1569,7 +1465,19 @@ index df3f8baf7..cae0f3ec7 100644
 +            top: titleElement.offsetTop - 77,
 +            // behavior: "smooth"  不能使用，否则无法定位
 +          });
-+        }
+         }
+-        let newCurrentElement: HTMLElement;
+-        if (event.key === "ArrowLeft") {
+-            if (currentElement.previousElementSibling) {
+-                currentElement.classList.remove("emojis__item--current");
+-                newCurrentElement = currentElement.previousElementSibling as HTMLElement;
+-                event.preventDefault();
+-                event.stopPropagation();
+-            } else if (currentElement.parentElement.previousElementSibling?.previousElementSibling) {
+-                currentElement.classList.remove("emojis__item--current");
+-                newCurrentElement = currentElement.parentElement.previousElementSibling.previousElementSibling.lastElementChild as HTMLElement;
+-                event.preventDefault();
+-                event.stopPropagation();
 +        break;
 +      } else if (target.getAttribute("data-action") === "remove") {
 +        if (type === "notebook") {
@@ -1614,19 +1522,7 @@ index df3f8baf7..cae0f3ec7 100644
 -                    newCurrentElement = nextContentElement.firstElementChild as HTMLElement;
 -                    currentElement.classList.remove("emojis__item--current");
 -                }
-+          );
-+        }
-+        if (callback) {
-+          callback("");
-+        }
-+        break;
-+      } else if (target.getAttribute("data-type")?.startsWith("tab-")) {
-+        dialogElement
-+          .querySelectorAll('.emojis__tabheader [data-type|="tab"]')
-+          .forEach((item: HTMLElement) => {
-+            if (item.dataset.type === target.dataset.type) {
-+              item.classList.add("block__icon--active");
-             } else {
+-            } else {
 -                currentElement.classList.remove("emojis__item--current");
 -                let counter = Math.floor(currentElement.parentElement.clientWidth / (currentElement.clientWidth + 2));
 -                newCurrentElement = currentElement;
@@ -1634,8 +1530,7 @@ index df3f8baf7..cae0f3ec7 100644
 -                    newCurrentElement = newCurrentElement.nextElementSibling as HTMLElement;
 -                    counter--;
 -                }
-+              item.classList.remove("block__icon--active");
-             }
+-            }
 -            event.preventDefault();
 -            event.stopPropagation();
 -        } else if (event.key === "ArrowUp") {
@@ -1645,13 +1540,7 @@ index df3f8baf7..cae0f3ec7 100644
 -                    newCurrentElement = prevContentElement.lastElementChild as HTMLElement;
 -                    currentElement.classList.remove("emojis__item--current");
 -                }
-+          });
-+        dialogElement
-+          .querySelectorAll(".emojis__tabbody > div")
-+          .forEach((item: HTMLElement) => {
-+            if (item.dataset.type === target.dataset.type) {
-+              item.classList.remove("fn__none");
-             } else {
+-            } else {
 -                currentElement.classList.remove("emojis__item--current");
 -                let counter = Math.floor(currentElement.parentElement.clientWidth / (currentElement.clientWidth + 2));
 -                newCurrentElement = currentElement;
@@ -1659,11 +1548,11 @@ index df3f8baf7..cae0f3ec7 100644
 -                    newCurrentElement = newCurrentElement.previousElementSibling as HTMLElement;
 -                    counter--;
 -                }
-+              item.classList.add("fn__none");
-             }
+-            }
 -            event.preventDefault();
 -            event.stopPropagation();
--        }
++          );
+         }
 -        if (newCurrentElement) {
 -            newCurrentElement.classList.add("emojis__item--current");
 -            const inputHeight = emojiSearchInputElement.clientHeight + 6;
@@ -1671,28 +1560,45 @@ index df3f8baf7..cae0f3ec7 100644
 -                emojisContentElement.scrollTop = newCurrentElement.offsetTop - inputHeight - 6;
 -            } else if (newCurrentElement.offsetTop - inputHeight - emojisContentElement.clientHeight + newCurrentElement.clientHeight > emojisContentElement.scrollTop) {
 -                emojisContentElement.scrollTop = newCurrentElement.offsetTop - inputHeight - emojisContentElement.clientHeight + newCurrentElement.clientHeight;
--            }
--        }
++        if (callback) {
++          callback("");
++        }
++        break;
++      } else if (
++        target.classList.contains("emojis__item") ||
++        target.getAttribute("data-action") === "random" ||
++        target.classList.contains("emoji__dynamic-item")
++      ) {
++        let unicode = "";
++        if (target.classList.contains("emojis__item")) {
++          unicode = target.getAttribute("data-unicode");
++          // Handle external/remote icons
++          if (unicode !== null && unicode.startsWith("external-")) {
++            const downloadUrl = target.getAttribute("data-download-url");
++            try {
++              const iconId = unicode.replace("external-", "");
++              const assetPath = await downloadAndStoreIcon(downloadUrl, iconId);
++              if (assetPath) {
++                unicode = assetPath.replace("emojis/", "").replace(/^\//, "");
++              }
++              // unicode = assetPath; // emojis/external/external-653276-20250508012313-7g2kc0m.png
++            } catch (error) {
++              console.error("Failed to process external icon:", error);
++              break;
+             }
++          }
++          dialog.destroy();
++        } else if (target.classList.contains("emoji__dynamic-item")) {
++          unicode = target.getAttribute("src");
++          dialog.destroy();
++        } else {
++          // 随机
++          unicode = getRandomEmoji();
+         }
 -    });
 -    if (!isMobile() && currentTab === "emoji") {
 -        emojiSearchInputElement.focus();
-+          });
-+        window.siyuan.storage[Constants.LOCAL_EMOJIS].currentTab =
-+          target.dataset.type.replace("tab-", "");
-+        setStorageVal(
-+          Constants.LOCAL_EMOJIS,
-+          window.siyuan.storage[Constants.LOCAL_EMOJIS]
-+        );
-+        break;
-+      } else if (target.classList.contains("color__square")) {
-+        dynamicTextElements[0].value = target
-+          .getAttribute("style")
-+          .replace("background-color:", "");
-+        dynamicTextElements[0].dispatchEvent(new CustomEvent("input"));
-+        break;
-+      }
-+      target = target.parentElement;
-     }
+-    }
 -    lazyLoadEmoji(dialog.element);
 -    lazyLoadEmojiImg(dialog.element);
 -    // 不能使用 getEventName 否则 https://github.com/siyuan-note/siyuan/issues/5472
@@ -1793,8 +1699,120 @@ index df3f8baf7..cae0f3ec7 100644
 -                dynamicTextElements[0].value = target.getAttribute("style").replace("background-color:", "");
 -                dynamicTextElements[0].dispatchEvent(new CustomEvent("input"));
 -                break;
--            }
++        if (type === "notebook") {
++          fetchPost(
++            "/api/notebook/setNotebookIcon",
++            {
++              notebook: id,
++              icon: unicode,
++            },
++            () => {
++              addEmoji(unicode);
++              updateFileTreeEmoji(unicode, id, "iconFilesRoot");
++            }
++          );
++        } else if (type === "doc") {
++          fetchPost(
++            "/api/attr/setBlockAttrs",
++            {
++              id,
++              attrs: { icon: unicode },
++            },
++            () => {
++              addEmoji(unicode);
++              updateFileTreeEmoji(unicode, id);
++              updateOutlineEmoji(unicode, id);
+             }
 -            target = target.parentElement;
++          );
+         }
+-    });
+-    const dynamicLangElements: NodeListOf<HTMLSelectElement> = dialog.element.querySelectorAll('[data-type="tab-dynamic"] .b3-select');
+-    dynamicLangElements[0].addEventListener("change", () => {
+-        dialog.element.querySelectorAll(".fn__flex-wrap .emoji__dynamic-item").forEach(item => {
+-            const url = new URLSearchParams(item.getAttribute("src").replace(dynamicURL, ""));
+-            if (dynamicLangElements[0].value) {
+-                url.set("lang", dynamicLangElements[0].value);
++        if (callback) {
++          callback(unicode);
++        }
++        break;
++      } else if (target.getAttribute("data-type")?.startsWith("tab-")) {
++        dialogElement
++          .querySelectorAll('.emojis__tabheader [data-type|="tab"]')
++          .forEach((item: HTMLElement) => {
++            if (item.dataset.type === target.dataset.type) {
++              item.classList.add("block__icon--active");
+             } else {
+-                url.delete("lang");
++              item.classList.remove("block__icon--active");
+             }
+-            item.setAttribute("src", dynamicURL + url.toString());
+-            dynamicLangElements[1].innerHTML = genWeekdayOptions(dynamicLangElements[0].value, dynamicLangElements[1].value);
+-        });
+-    });
+-    dynamicLangElements[1].addEventListener("change", () => {
+-        dialog.element.querySelectorAll(".fn__flex-wrap .emoji__dynamic-item").forEach(item => {
+-            const url = new URLSearchParams(item.getAttribute("src").replace(dynamicURL, ""));
+-            url.set("weekdayType", dynamicLangElements[1].value);
+-            item.setAttribute("src", dynamicURL + url.toString());
+-        });
+-    });
+-    const dynamicDateElement = dialog.element.querySelector('[data-type="tab-dynamic"] [type="date"]') as HTMLInputElement;
+-    dynamicDateElement.addEventListener("change", () => {
+-        dialog.element.querySelectorAll(".fn__flex-wrap .emoji__dynamic-item").forEach(item => {
+-            const url = new URLSearchParams(item.getAttribute("src").replace(dynamicURL, ""));
+-            url.set("date", dynamicDateElement.value ? dayjs(dynamicDateElement.value).format("YYYY-MM-DD") : "");
+-            item.setAttribute("src", dynamicURL + url.toString());
+-        });
+-    });
+-    const dynamicTextElements: NodeListOf<HTMLInputElement> = dialog.element.querySelectorAll('[data-type="tab-dynamic"] [type="text"]');
+-    const dynamicTextImgElement = dialog.element.querySelector('.emoji__dynamic-item[data-type="text"]');
+-    dynamicTextElements[0].addEventListener("input", () => {
+-        if (!dynamicTextElements[0].value.startsWith("#")) {
+-            return;
+-        }
+-        dialog.element.querySelectorAll(".emoji__dynamic-item").forEach(item => {
+-            const url = new URLSearchParams(item.getAttribute("src").replace(dynamicURL, ""));
+-            url.set("color", dynamicTextElements[0].value);
+-            item.setAttribute("src", dynamicURL + url.toString());
+-        });
+-        dialog.element.querySelectorAll(".color__square").forEach((item: HTMLElement) => {
+-            if (item.style.backgroundColor === dynamicTextElements[0].value) {
+-                item.classList.add("color__square--current");
++          });
++        dialogElement
++          .querySelectorAll(".emojis__tabbody > div")
++          .forEach((item: HTMLElement) => {
++            if (item.dataset.type === target.dataset.type) {
++              item.classList.remove("fn__none");
+             } else {
+-                item.classList.remove("color__square--current");
++              item.classList.add("fn__none");
+             }
+-        });
+-    });
+-    dynamicTextElements[1].addEventListener("input", () => {
+-        const url = new URLSearchParams(dynamicTextImgElement.getAttribute("src").replace(dynamicURL, ""));
+-        url.set("content", dynamicTextElements[1].value);
+-        dynamicTextImgElement.setAttribute("src", dynamicURL + url.toString());
++          });
++        window.siyuan.storage[Constants.LOCAL_EMOJIS].currentTab =
++          target.dataset.type.replace("tab-", "");
++        setStorageVal(
++          Constants.LOCAL_EMOJIS,
++          window.siyuan.storage[Constants.LOCAL_EMOJIS]
++        );
++        break;
++      } else if (target.classList.contains("color__square")) {
++        dynamicTextElements[0].value = target
++          .getAttribute("style")
++          .replace("background-color:", "");
++        dynamicTextElements[0].dispatchEvent(new CustomEvent("input"));
++        break;
++      }
++      target = target.parentElement;
++    }
 +  });
 +  const dynamicLangElements: NodeListOf<HTMLSelectElement> =
 +    dialog.element.querySelectorAll('[data-type="tab-dynamic"] .b3-select');
@@ -1809,7 +1827,7 @@ index df3f8baf7..cae0f3ec7 100644
 +          url.set("lang", dynamicLangElements[0].value);
 +        } else {
 +          url.delete("lang");
-         }
++        }
 +        item.setAttribute("src", dynamicURL + url.toString());
 +        dynamicLangElements[1].innerHTML = genWeekdayOptions(
 +          dynamicLangElements[0].value,
@@ -1863,18 +1881,6 @@ index df3f8baf7..cae0f3ec7 100644
 +      url.set("color", dynamicTextElements[0].value);
 +      item.setAttribute("src", dynamicURL + url.toString());
      });
--    const dynamicLangElements: NodeListOf<HTMLSelectElement> = dialog.element.querySelectorAll('[data-type="tab-dynamic"] .b3-select');
--    dynamicLangElements[0].addEventListener("change", () => {
--        dialog.element.querySelectorAll(".fn__flex-wrap .emoji__dynamic-item").forEach(item => {
--            const url = new URLSearchParams(item.getAttribute("src").replace(dynamicURL, ""));
--            if (dynamicLangElements[0].value) {
--                url.set("lang", dynamicLangElements[0].value);
--            } else {
--                url.delete("lang");
--            }
--            item.setAttribute("src", dynamicURL + url.toString());
--            dynamicLangElements[1].innerHTML = genWeekdayOptions(dynamicLangElements[0].value, dynamicLangElements[1].value);
--        });
 +    dialog.element
 +      .querySelectorAll(".color__square")
 +      .forEach((item: HTMLElement) => {
@@ -1892,9 +1898,16 @@ index df3f8baf7..cae0f3ec7 100644
 +    url.set("content", dynamicTextElements[1].value);
 +    dynamicTextImgElement.setAttribute("src", dynamicURL + url.toString());
 +  });
-+};
-+
-+export const updateOutlineEmoji = (unicode: string, id: string) => {
+ };
+ 
+ export const updateOutlineEmoji = (unicode: string, id: string) => {
+-    /// #if !MOBILE
+-    getAllModels().outline.forEach(model => {
+-        if (model.blockId === id) {
+-            model.headerElement.nextElementSibling.firstElementChild.outerHTML = unicode2Emoji(unicode || window.siyuan.storage[Constants.LOCAL_IMAGES].file, "b3-list-item__graphic", true);
+-        }
+-    });
+-    /// #endif
 +  /// #if !MOBILE
 +  getAllModels().outline.forEach((model) => {
 +    if (model.blockId === id) {
@@ -1907,8 +1920,28 @@ index df3f8baf7..cae0f3ec7 100644
 +    }
 +  });
 +  /// #endif
-+};
-+
+ };
+ 
+-export const updateFileTreeEmoji = (unicode: string, id: string, icon = "iconFile") => {
+-    let emojiElement;
+-    /// #if MOBILE
+-    emojiElement = document.querySelector(`#sidebar [data-type="sidebar-file"] [data-node-id="${id}"] .b3-list-item__icon`);
+-    /// #else
+-    const dockFile = getDockByType("file");
+-    if (dockFile) {
+-        const files = dockFile.data.file as Files;
+-        if (icon === "iconFile") {
+-            emojiElement = files.element.querySelector(`[data-node-id="${id}"] .b3-list-item__icon`);
+-        } else {
+-            emojiElement = files.element.querySelector(`[data-node-id="${id}"] .b3-list-item__icon`) || files.element.querySelector(`[data-url="${id}"] .b3-list-item__icon`) || files.closeElement.querySelector(`[data-url="${id}"] .b3-list-item__icon`);
+-        }
+-    }
+-    /// #endif
+-    if (emojiElement) {
+-        emojiElement.innerHTML = unicode2Emoji(unicode || (icon === "iconFile" ? (emojiElement.previousElementSibling.classList.contains("fn__hidden") ? window.siyuan.storage[Constants.LOCAL_IMAGES].file : window.siyuan.storage[Constants.LOCAL_IMAGES].folder) : window.siyuan.storage[Constants.LOCAL_IMAGES].note));
+-    }
+-    if (icon !== "iconFile") {
+-        setNoteBook();
 +export const updateFileTreeEmoji = (
 +  unicode: string,
 +  id: string,
@@ -1936,7 +1969,7 @@ index df3f8baf7..cae0f3ec7 100644
 +        files.closeElement.querySelector(
 +          `[data-url="${id}"] .b3-list-item__icon`
 +        );
-+    }
+     }
 +  }
 +  /// #endif
 +  if (emojiElement) {
@@ -1952,9 +1985,16 @@ index df3f8baf7..cae0f3ec7 100644
 +  if (icon !== "iconFile") {
 +    setNoteBook();
 +  }
-+};
-+
-+export const getEmojiDesc = (emoji: IEmojiItem) => {
+ };
+ 
+ export const getEmojiDesc = (emoji: IEmojiItem) => {
+-    if (window.siyuan.config.lang === "zh_CN") {
+-        return emoji.description_zh_cn;
+-    }
+-    if (window.siyuan.config.lang === "ja_JP") {
+-        return emoji.description_ja_jp;
+-    }
+-    return emoji.description;
 +  if (window.siyuan.config.lang === "zh_CN") {
 +    return emoji.description_zh_cn;
 +  }
@@ -1962,9 +2002,16 @@ index df3f8baf7..cae0f3ec7 100644
 +    return emoji.description_ja_jp;
 +  }
 +  return emoji.description;
-+};
-+
-+export const getEmojiTitle = (index: number) => {
+ };
+ 
+ export const getEmojiTitle = (index: number) => {
+-    if (window.siyuan.config.lang === "zh_CN") {
+-        return window.siyuan.emojis[index].title_zh_cn;
+-    }
+-    if (window.siyuan.config.lang === "ja_JP") {
+-        return window.siyuan.emojis[index].title_ja_jp;
+-    }
+-    return window.siyuan.emojis[index].title;
 +  if (window.siyuan.config.lang === "zh_CN") {
 +    return window.siyuan.emojis[index].title_zh_cn;
 +  }
@@ -1972,38 +2019,37 @@ index df3f8baf7..cae0f3ec7 100644
 +    return window.siyuan.emojis[index].title_ja_jp;
 +  }
 +  return window.siyuan.emojis[index].title;
-+};
-+
-+const putEmojis = (protyle: IProtyle) => {
+ };
+ 
+ const putEmojis = (protyle: IProtyle) => {
+-    if (window.siyuan.emojis[0].items.length > 0) {
+-        const emojis: IObject = {};
+-        window.siyuan.emojis[0].items.forEach(emojiITem => {
+-            emojis[emojiITem.keywords] = protyle.options.hint.emojiPath + "/" + emojiITem.unicode;
+-        });
+-        protyle.lute.PutEmojis(emojis);
+-    }
 +  if (window.siyuan.emojis[0].items.length > 0) {
 +    const emojis: IObject = {};
 +    window.siyuan.emojis[0].items.forEach((emojiITem) => {
 +      emojis[emojiITem.keywords] =
 +        protyle.options.hint.emojiPath + "/" + emojiITem.unicode;
-     });
--    dynamicLangElements[1].addEventListener("change", () => {
--        dialog.element.querySelectorAll(".fn__flex-wrap .emoji__dynamic-item").forEach(item => {
--            const url = new URLSearchParams(item.getAttribute("src").replace(dynamicURL, ""));
--            url.set("weekdayType", dynamicLangElements[1].value);
--            item.setAttribute("src", dynamicURL + url.toString());
--        });
++    });
 +    protyle.lute.PutEmojis(emojis);
 +  }
-+};
-+
-+export const reloadEmoji = () => {
+ };
+ 
+ export const reloadEmoji = () => {
+-    fetchPost("/api/system/getEmojiConf", {}, response => {
+-        window.siyuan.emojis = response.data as IEmoji[];
+-        getAllEditor().forEach(item => {
+-            putEmojis(item.protyle);
+-        });
 +  fetchPost("/api/system/getEmojiConf", {}, (response) => {
 +    window.siyuan.emojis = response.data as IEmoji[];
 +    getAllEditor().forEach((item) => {
 +      putEmojis(item.protyle);
-     });
--    const dynamicDateElement = dialog.element.querySelector('[data-type="tab-dynamic"] [type="date"]') as HTMLInputElement;
--    dynamicDateElement.addEventListener("change", () => {
--        dialog.element.querySelectorAll(".fn__flex-wrap .emoji__dynamic-item").forEach(item => {
--            const url = new URLSearchParams(item.getAttribute("src").replace(dynamicURL, ""));
--            url.set("date", dynamicDateElement.value ? dayjs(dynamicDateElement.value).format("YYYY-MM-DD") : "");
--            item.setAttribute("src", dynamicURL + url.toString());
--        });
++    });
 +  });
 +};
 +
@@ -2018,25 +2064,7 @@ index df3f8baf7..cae0f3ec7 100644
 +      const aDiff = Math.abs(a.size - targetSize);
 +      const bDiff = Math.abs(b.size - targetSize);
 +      return aDiff - bDiff;
-     });
--    const dynamicTextElements: NodeListOf<HTMLInputElement> = dialog.element.querySelectorAll('[data-type="tab-dynamic"] [type="text"]');
--    const dynamicTextImgElement = dialog.element.querySelector('.emoji__dynamic-item[data-type="text"]');
--    dynamicTextElements[0].addEventListener("input", () => {
--        if (!dynamicTextElements[0].value.startsWith("#")) {
--            return;
--        }
--        dialog.element.querySelectorAll(".emoji__dynamic-item").forEach(item => {
--            const url = new URLSearchParams(item.getAttribute("src").replace(dynamicURL, ""));
--            url.set("color", dynamicTextElements[0].value);
--            item.setAttribute("src", dynamicURL + url.toString());
--        });
--        dialog.element.querySelectorAll(".color__square").forEach((item: HTMLElement) => {
--            if (item.style.backgroundColor === dynamicTextElements[0].value) {
--                item.classList.add("color__square--current");
--            } else {
--                item.classList.remove("color__square--current");
--            }
--        });
++    });
 +
 +    // Find first size that has PNG format
 +    for (const size of sizes) {
@@ -2062,11 +2090,7 @@ index df3f8baf7..cae0f3ec7 100644
 +      const aDiff = Math.abs(a.width - targetSize);
 +      const bDiff = Math.abs(b.width - targetSize);
 +      return aDiff - bDiff;
-     });
--    dynamicTextElements[1].addEventListener("input", () => {
--        const url = new URLSearchParams(dynamicTextImgElement.getAttribute("src").replace(dynamicURL, ""));
--        url.set("content", dynamicTextElements[1].value);
--        dynamicTextImgElement.setAttribute("src", dynamicURL + url.toString());
++    });
 +
 +    const thumbnailUrl = thumbnails[0]?.url;
 +
@@ -2126,19 +2150,13 @@ index df3f8baf7..cae0f3ec7 100644
 +        description_ja_jp: icon.tags.join(", "),
 +        keywords: `${icon.tags.join(" ")} __url__${urlData}`,
 +      };
-     });
++    });
 +  } catch (error) {
 +    console.error("IconFinder search failed:", error);
 +    return [];
 +  }
- };
- 
--export const updateOutlineEmoji = (unicode: string, id: string) => {
--    /// #if !MOBILE
--    getAllModels().outline.forEach(model => {
--        if (model.blockId === id) {
--            model.headerElement.nextElementSibling.firstElementChild.outerHTML = unicode2Emoji(unicode || window.siyuan.storage[Constants.LOCAL_IMAGES].file, "b3-list-item__graphic", true);
--        }
++};
++
 +export const searchIcon8 = async (
 +  query: string,
 +  maxResults: number = 20
@@ -2176,34 +2194,13 @@ index df3f8baf7..cae0f3ec7 100644
 +        keywords: `${icon.name} __url__${urlData}`,
 +      };
      });
--    /// #endif
 +    return icons;
 +  } catch (error) {
 +    console.error("Icon8 search failed:", error);
 +    return [];
 +  }
- };
- 
--export const updateFileTreeEmoji = (unicode: string, id: string, icon = "iconFile") => {
--    let emojiElement;
--    /// #if MOBILE
--    emojiElement = document.querySelector(`#sidebar [data-type="sidebar-file"] [data-node-id="${id}"] .b3-list-item__icon`);
--    /// #else
--    const dockFile = getDockByType("file");
--    if (dockFile) {
--        const files = dockFile.data.file as Files;
--        if (icon === "iconFile") {
--            emojiElement = files.element.querySelector(`[data-node-id="${id}"] .b3-list-item__icon`);
--        } else {
--            emojiElement = files.element.querySelector(`[data-node-id="${id}"] .b3-list-item__icon`) || files.element.querySelector(`[data-url="${id}"] .b3-list-item__icon`) || files.closeElement.querySelector(`[data-url="${id}"] .b3-list-item__icon`);
--        }
--    }
--    /// #endif
--    if (emojiElement) {
--        emojiElement.innerHTML = unicode2Emoji(unicode || (icon === "iconFile" ? (emojiElement.previousElementSibling.classList.contains("fn__hidden") ? window.siyuan.storage[Constants.LOCAL_IMAGES].file : window.siyuan.storage[Constants.LOCAL_IMAGES].folder) : window.siyuan.storage[Constants.LOCAL_IMAGES].note));
--    }
--    if (icon !== "iconFile") {
--        setNoteBook();
++};
++
 +const searchFlatIcon = async (
 +  query: string,
 +  maxResults: number = 20
@@ -2221,7 +2218,7 @@ index df3f8baf7..cae0f3ec7 100644
 +
 +    if (!response.ok) {
 +      throw new Error(`FlatIcon API error: ${response.statusText}`);
-     }
++    }
 +
 +    const data: IFlatIconResponse = await response.json();
 +
@@ -2242,11 +2239,8 @@ index df3f8baf7..cae0f3ec7 100644
 +    console.error("FlatIcon search failed:", error);
 +    return [];
 +  }
- };
- 
--export const getEmojiDesc = (emoji: IEmojiItem) => {
--    if (window.siyuan.config.lang === "zh_CN") {
--        return emoji.description_zh_cn;
++};
++
 +function extractUrlsFromKeywords(
 +  keywords: string
 +): { downloadUrl: string; previewUrl: string } | null {
@@ -2277,9 +2271,7 @@ index df3f8baf7..cae0f3ec7 100644
 +      }
 +    } catch {
 +      // File doesn't exist, continue with download
-     }
--    if (window.siyuan.config.lang === "ja_JP") {
--        return emoji.description_ja_jp;
++    }
 +
 +    // Download the icon
 +    let response: Response | null;
@@ -2299,43 +2291,18 @@ index df3f8baf7..cae0f3ec7 100644
 +          "x-freepik-api-key": `Bearer ${window.siyuan.config.appearance.flatIconAPIKey}`,
 +        },
 +      });
-     }
--    return emoji.description;
--};
- 
--export const getEmojiTitle = (index: number) => {
--    if (window.siyuan.config.lang === "zh_CN") {
--        return window.siyuan.emojis[index].title_zh_cn;
++    }
++
 +    if (response === null) {
 +      throw new Error("Failed to fetch icon URL");
-     }
--    if (window.siyuan.config.lang === "ja_JP") {
--        return window.siyuan.emojis[index].title_ja_jp;
++    }
 +    if (!response.ok) {
 +      throw new Error("Failed to download icon");
-     }
--    return window.siyuan.emojis[index].title;
--};
- 
--const putEmojis = (protyle: IProtyle) => {
--    if (window.siyuan.emojis[0].items.length > 0) {
--        const emojis: IObject = {};
--        window.siyuan.emojis[0].items.forEach(emojiITem => {
--            emojis[emojiITem.keywords] = protyle.options.hint.emojiPath + "/" + emojiITem.unicode;
--        });
--        protyle.lute.PutEmojis(emojis);
--    }
--};
++    }
++
 +    const blob = await response.blob();
 +    const formData = new FormData();
- 
--export const reloadEmoji = () => {
--    fetchPost("/api/system/getEmojiConf", {}, response => {
--        window.siyuan.emojis = response.data as IEmoji[];
--        getAllEditor().forEach(item => {
--            putEmojis(item.protyle);
--        });
--    });
++
 +    // Set up form data for upload
 +    formData.append(
 +      "file[]",
