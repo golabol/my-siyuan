@@ -1,8 +1,8 @@
 diff --git a/app/src/config/appearance.ts b/app/src/config/appearance.ts
-index acdac0d50..a024f30b3 100644
+index acdac0d50..a430355dd 100644
 --- a/app/src/config/appearance.ts
 +++ b/app/src/config/appearance.ts
-@@ -119,6 +119,33 @@ export const appearance = {
+@@ -119,6 +119,35 @@ export const appearance = {
          ${window.siyuan.languages.showInFolder}
      </button>
  </div>
@@ -13,8 +13,10 @@ index acdac0d50..a024f30b3 100644
 +    </div>
 +    <span class="fn__space"></span>
 +    <select id="remoteIconProvider" class="b3-select fn__flex-center fn__size200">
++        <option value=""></option>
 +        <option value="iconFinder" ${window.siyuan.config.appearance.remoteIconProvider === 'iconFinder' ? "selected" : ""}>IconFinder</option>
 +        <option value="icon8" ${window.siyuan.config.appearance.remoteIconProvider === 'icon8' ? "selected" : ""}>Icon8</option>
++        <option value="flatIcon" ${window.siyuan.config.appearance.remoteIconProvider === 'flatIcon' ? "selected" : ""}>FlatIcon</option>
 +    </select>
 +</div>
 +<div class="b3-label config__item${isBrowser() ? " fn__none" : " fn__flex"}">
@@ -36,7 +38,7 @@ index acdac0d50..a024f30b3 100644
  <div class="b3-label fn__flex config__item">
     <div class="fn__flex-1">
          ${window.siyuan.languages.resetLayout}
-@@ -184,6 +211,9 @@ export const appearance = {
+@@ -184,6 +213,9 @@ export const appearance = {
              lightThemes: window.siyuan.config.appearance.lightThemes,
              icons: window.siyuan.config.appearance.icons,
              lang: (appearance.element.querySelector("#lang") as HTMLSelectElement).value,
@@ -46,7 +48,7 @@ index acdac0d50..a024f30b3 100644
              closeButtonBehavior: (appearance.element.querySelector("#closeButtonBehavior") as HTMLInputElement).checked ? 1 : 0,
              hideStatusBar: (appearance.element.querySelector("#hideStatusBar") as HTMLInputElement).checked,
          }, async response => {
-@@ -252,6 +282,13 @@ export const appearance = {
+@@ -252,6 +284,13 @@ export const appearance = {
                  appearance._send();
              });
          });
@@ -61,10 +63,10 @@ index acdac0d50..a024f30b3 100644
      onSetappearance(data: Config.IAppearance) {
          if (data.lang !== window.siyuan.config.appearance.lang) {
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..cb4c5d208 100644
+index df3f8baf7..d34800cd6 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
-@@ -1,276 +1,528 @@
+@@ -1,276 +1,531 @@
 -import {getRandom, isMobile} from "../util/functions";
 -import {fetchPost} from "../util/fetch";
 -import {Constants} from "../constants";
@@ -272,7 +274,7 @@ index df3f8baf7..cb4c5d208 100644
 -    const recentEmojis: IEmojiItem[] = [];
 -    if (key) {
 -        html = `<div class="emojis__title">${window.siyuan.languages.emoji}</div><div class="emojis__content">`;
-+export const filterEmoji = async (key = "", max?: number) => {
++export const filterEmoji = async (key = "", triggered_by: "slash_hint" | "doc_notebook" = "doc_notebook", max?: number) => {
 +  let html = "";
 +  const recentEmojis: IEmojiItem[] = [];
 +  if (key) {
@@ -293,6 +295,9 @@ index df3f8baf7..cb4c5d208 100644
 +      }" class="emojis__content"${
 +        index > 1 ? ' data-index="' + index + '"' : ""
 +      }>`;
++    }
++    if (category.items.length === 0 && index === 0 && !key) {
++      html += `<div style="margin-left: 4px">${window.siyuan.languages.setEmojiTip}</div>`;
      }
 -    let maxCount = 0;
 -    let keyHTML = "";
@@ -300,9 +305,6 @@ index df3f8baf7..cb4c5d208 100644
 -    window.siyuan.emojis.forEach((category, index) => {
 -        if (!key) {
 -            html += `<div class="emojis__title" data-type="${index + 1}">${getEmojiTitle(index)}</div><div style="min-height:${index === 0 ? "30px" : "300px"}" class="emojis__content"${index > 1 ? ' data-index="' + index + '"' : ""}>`;
-+    if (category.items.length === 0 && index === 0 && !key) {
-+      html += `<div style="margin-left: 4px">${window.siyuan.languages.setEmojiTip}</div>`;
-+    }
 +
 +    category.items.forEach((emoji) => {
 +      if (key) {
@@ -399,17 +401,6 @@ index df3f8baf7..cb4c5d208 100644
 -            const bKeywords = b.keywords.split("/");
 -            if (aKeywords[aKeywords.length - 1].toLowerCase().indexOf(key.toLowerCase()) < bKeywords[bKeywords.length - 1].toLowerCase().indexOf(key.toLowerCase())) {
 -                return -1;
--            }
--            return 0;
--        }).sort((a, b) => {
--            const aKeywords = a.keywords.split("/");
--            const bKeywords = b.keywords.split("/");
--            if (aKeywords[aKeywords.length - 1].toLowerCase().indexOf(key.toLowerCase()) === bKeywords[bKeywords.length - 1].toLowerCase().indexOf(key.toLowerCase()) && aKeywords[aKeywords.length - 1].length < bKeywords[bKeywords.length - 1].length) {
--                return -1;
--            }
--            return 0;
--        }).forEach(item => {
--            html += `<button data-unicode="${item.unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(item)}">
 +    if (!key) {
 +      html += "</div>";
 +    }
@@ -454,33 +445,32 @@ index df3f8baf7..cb4c5d208 100644
 +        html += `<button data-unicode="${
 +          item.unicode
 +        }" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(item)}">
- ${unicode2Emoji(item.unicode, undefined, false, true)}</button>`;
--        });
--        html = html + keyHTML + "</div>";
++${unicode2Emoji(item.unicode, undefined, false, true)}</button>`;
 +      });
 +    html = html + keyHTML + "</div>";
 +  }
 +
-+  // Check for API key and search string before attempting external search
-+  if (window.siyuan.config.appearance.remoteIconProvider !== "") {
-+    if (window.siyuan.config.appearance.remoteIconProvider === "iconfinder") {
-+      if (
-+        key &&
-+        key.length > 2 &&
-+        window.siyuan.config.appearance.iconFinderAPIKey &&
-+        window.siyuan.config.appearance.iconFinderAPIKey.trim() !== ""
-+      ) {
-+        try {
-+          const externalIcons = await searchIconFinder(key, max || 50);
++  if (key && triggered_by !== "slash_hint") {
++    // Check for API key and search string before attempting external search
++    if (window.siyuan.config.appearance.remoteIconProvider !== "") {
++      if (window.siyuan.config.appearance.remoteIconProvider === "iconFinder") {
++        if (
++          key &&
++          key.length > 2 &&
++          window.siyuan.config.appearance.iconFinderAPIKey &&
++          window.siyuan.config.appearance.iconFinderAPIKey.trim() !== ""
++        ) {
++          try {
++            const externalIcons = await searchIconFinder(key, max || 50);
 +
-+          if (externalIcons.length > 0) {
-+            externalIconsContent += `<div class="emojis__title fn__block">External Icons (${window.siyuan.config.appearance.remoteIconProvider})</div><div class="emojis__content">`;
-+            externalIconsContent += '<div class="fn__hr"></div>';
++            if (externalIcons.length > 0) {
++              externalIconsContent += `<div class="emojis__title fn__block">External Icons (${window.siyuan.config.appearance.remoteIconProvider})</div><div class="emojis__content">`;
++              externalIconsContent += '<div class="fn__hr"></div>';
 +
-+            externalIcons.forEach((icon) => {
-+              const urls = extractUrlsFromKeywords(icon.keywords);
-+              if (urls) {
-+                externalIconsContent += `<button 
++              externalIcons.forEach((icon) => {
++                const urls = extractUrlsFromKeywords(icon.keywords);
++                if (urls) {
++                  externalIconsContent += `<button 
 +                  data-unicode="${icon.unicode}"
 +                  data-download-url="${urls.downloadUrl}"
 +                  class="emojis__item ariaLabel" 
@@ -490,35 +480,41 @@ index df3f8baf7..cb4c5d208 100644
 +                  <img src="${urls.previewUrl}" 
 +                    style="width: 24px; height: 24px; object-fit: contain;"/>
 +                </button>`;
-+              }
-+            });
++                }
++              });
 +
-+            externalIconsContent += "</div>";
++              externalIconsContent += "</div>";
+             }
+-            return 0;
+-        }).sort((a, b) => {
+-            const aKeywords = a.keywords.split("/");
+-            const bKeywords = b.keywords.split("/");
+-            if (aKeywords[aKeywords.length - 1].toLowerCase().indexOf(key.toLowerCase()) === bKeywords[bKeywords.length - 1].toLowerCase().indexOf(key.toLowerCase()) && aKeywords[aKeywords.length - 1].length < bKeywords[bKeywords.length - 1].length) {
+-                return -1;
++          } catch (error) {
++            console.error("Error fetching external icons:", error);
 +          }
-+        } catch (error) {
-+          console.error("Error fetching external icons:", error);
 +        }
-+      }
-+    } else if (
-+      window.siyuan.config.appearance.remoteIconProvider === "flaticon"
-+    ) {
-+      if (
-+        key &&
-+        key.length > 2 &&
-+        window.siyuan.config.appearance.flatIconAPIKey &&
-+        window.siyuan.config.appearance.flatIconAPIKey.trim() !== ""
++      } else if (
++        window.siyuan.config.appearance.remoteIconProvider === "flatIcon"
 +      ) {
-+        try {
-+          const externalIcons = await searchFlatIcon(key, max || 50);
++        if (
++          key &&
++          key.length > 2 &&
++          window.siyuan.config.appearance.flatIconAPIKey &&
++          window.siyuan.config.appearance.flatIconAPIKey.trim() !== ""
++        ) {
++          try {
++            const externalIcons = await searchFlatIcon(key, max || 50);
 +
-+          if (externalIcons.length > 0) {
-+            externalIconsContent += `<div class="emojis__title fn__block">External Icons (${window.siyuan.config.appearance.remoteIconProvider})</div><div class="emojis__content">`;
-+            externalIconsContent += '<div class="fn__hr"></div>';
++            if (externalIcons.length > 0) {
++              externalIconsContent += `<div class="emojis__title fn__block">External Icons (${window.siyuan.config.appearance.remoteIconProvider})</div><div class="emojis__content">`;
++              externalIconsContent += '<div class="fn__hr"></div>';
 +
-+            externalIcons.forEach((icon) => {
-+              const urls = extractUrlsFromKeywords(icon.keywords);
-+              if (urls) {
-+                externalIconsContent += `<button 
++              externalIcons.forEach((icon) => {
++                const urls = extractUrlsFromKeywords(icon.keywords);
++                if (urls) {
++                  externalIconsContent += `<button 
 +                  data-unicode="${icon.unicode}"
 +                  data-download-url="${urls.downloadUrl}"
 +                  class="emojis__item ariaLabel" 
@@ -528,34 +524,42 @@ index df3f8baf7..cb4c5d208 100644
 +                  <img src="${urls.previewUrl}" 
 +                    style="width: 24px; height: 24px; object-fit: contain;"/>
 +                </button>`;
-+              }
-+            });
++                }
++              });
 +
-+            externalIconsContent += "</div>";
++              externalIconsContent += "</div>";
+             }
+-            return 0;
+-        }).forEach(item => {
+-            html += `<button data-unicode="${item.unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(item)}">
+-${unicode2Emoji(item.unicode, undefined, false, true)}</button>`;
+-        });
+-        html = html + keyHTML + "</div>";
++          } catch (error) {
++            console.error("Error fetching external icons:", error);
 +          }
-+        } catch (error) {
-+          console.error("Error fetching external icons:", error);
 +        }
-+      }
-+    } else if (window.siyuan.config.appearance.remoteIconProvider === "icon8") {
-+      // if (
-+      //   key &&
-+      //   key.length > 2 &&
-+      //   window.siyuan.config.appearance.icon8APIKey &&
-+      //   window.siyuan.config.appearance.icon8APIKey.trim() !== ""
-+      // ) {
-+      // }
-+      try {
-+        const externalIcons = await searchIcon8(key, max || 50);
++      } else if (
++        window.siyuan.config.appearance.remoteIconProvider === "icon8"
++      ) {
++        // if (
++        //   key &&
++        //   key.length > 2 &&
++        //   window.siyuan.config.appearance.icon8APIKey &&
++        //   window.siyuan.config.appearance.icon8APIKey.trim() !== ""
++        // ) {
++        // }
++        try {
++          const externalIcons = await searchIcon8(key, max || 50);
 +
-+        if (externalIcons.length > 0) {
-+          externalIconsContent += `<div class="emojis__title fn__block">External Icons (${window.siyuan.config.appearance.remoteIconProvider})</div><div class="emojis__content">`;
-+          externalIconsContent += '<div class="fn__hr"></div>';
++          if (externalIcons.length > 0) {
++            externalIconsContent += `<div class="emojis__title fn__block">External Icons (${window.siyuan.config.appearance.remoteIconProvider})</div><div class="emojis__content">`;
++            externalIconsContent += '<div class="fn__hr"></div>';
 +
-+          externalIcons.forEach((icon) => {
-+            const urls = extractUrlsFromKeywords(icon.keywords);
-+            if (urls) {
-+              externalIconsContent += `<button 
++            externalIcons.forEach((icon) => {
++              const urls = extractUrlsFromKeywords(icon.keywords);
++              if (urls) {
++                externalIconsContent += `<button 
 +                data-unicode="${icon.unicode}"
 +                data-download-url="${urls.downloadUrl}"
 +                class="emojis__item ariaLabel" 
@@ -565,13 +569,14 @@ index df3f8baf7..cb4c5d208 100644
 +                <img src="${urls.previewUrl}" 
 +                  style="width: 24px; height: 24px; object-fit: contain;"/>
 +              </button>`;
-+            }
-+          });
++              }
++            });
 +
-+          externalIconsContent += "</div>";
++            externalIconsContent += "</div>";
++          }
++        } catch (error) {
++          console.error("Error fetching external icons:", error);
 +        }
-+      } catch (error) {
-+        console.error("Error fetching external icons:", error);
 +      }
      }
 -    let recentHTML = "";
@@ -581,9 +586,8 @@ index df3f8baf7..cb4c5d208 100644
 -            const emoji = recentEmojis.filter((item) => item.unicode === emojiUnicode);
 -            if (emoji[0]) {
 -                recentHTML += `<button data-unicode="${emoji[0].unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(emoji[0])}">
++    html += externalIconsContent;
 +  }
-+
-+  html += externalIconsContent;
 +
 +  // Process recent emojis
 +  let recentHTML = "";
@@ -819,7 +823,7 @@ index df3f8baf7..cb4c5d208 100644
      </div>
      <div class="emojis__tabbody">
          <div class="fn__none" data-type="tab-emoji">
-@@ -279,481 +531,1055 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -279,481 +534,1055 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="fn__space"></span>
                  <label class="b3-form__icon fn__flex-1" style="overflow:initial;">
                      <svg class="b3-form__icon-icon"><use xlink:href="#iconSearch"></use></svg>
@@ -1459,10 +1463,6 @@ index df3f8baf7..cb4c5d208 100644
 +          });
 +          updateFileTreeEmoji(unicode, id);
 +          updateOutlineEmoji(unicode, id);
-+        }
-+
-+        if (callback) {
-+          callback(unicode);
          }
 -        let newCurrentElement: HTMLElement;
 -        if (event.key === "ArrowLeft") {
@@ -1476,6 +1476,10 @@ index df3f8baf7..cb4c5d208 100644
 -                newCurrentElement = currentElement.parentElement.previousElementSibling.previousElementSibling.lastElementChild as HTMLElement;
 -                event.preventDefault();
 -                event.stopPropagation();
++
++        if (callback) {
++          callback(unicode);
++        }
 +        addEmoji(unicode);
 +        break;
 +      } else if (target.getAttribute("data-action") === "remove") {
@@ -1989,7 +1993,7 @@ index df3f8baf7..cb4c5d208 100644
 +    window.siyuan.emojis = response.data as IEmoji[];
 +    getAllEditor().forEach((item) => {
 +      putEmojis(item.protyle);
-+    });
+     });
 +  });
 +};
 +
@@ -2121,7 +2125,7 @@ index df3f8baf7..cb4c5d208 100644
 +      } else {
 +        return true;
 +      }
-     });
++    });
 +
 +    const icons = nonPremiumIcons.map((icon): IEmojiItem => {
 +      const urls = getIconUrls(icon);
@@ -2215,7 +2219,7 @@ index df3f8baf7..cb4c5d208 100644
 +
 +    // Download the icon
 +    let response: Response | null;
-+    if (window.siyuan.config.appearance.remoteIconProvider === "iconfinder") {
++    if (window.siyuan.config.appearance.remoteIconProvider === "iconFinder") {
 +      response = await fetch(iconUrl, {
 +        headers: {
 +          Authorization: `Bearer ${window.siyuan.config.appearance.iconFinderAPIKey}`,
@@ -2224,7 +2228,7 @@ index df3f8baf7..cb4c5d208 100644
 +    } else if (window.siyuan.config.appearance.remoteIconProvider === "icon8") {
 +      response = await fetch(iconUrl);
 +    } else if (
-+      window.siyuan.config.appearance.remoteIconProvider === "flaticon"
++      window.siyuan.config.appearance.remoteIconProvider === "flatIcon"
 +    ) {
 +      response = await fetch(iconUrl, {
 +        headers: {
@@ -2268,6 +2272,78 @@ index df3f8baf7..cb4c5d208 100644
 +    throw error;
 +  }
  };
+diff --git a/app/src/layout/dock/Files.ts b/app/src/layout/dock/Files.ts
+index 07f8c48e8..0f51f2209 100644
+--- a/app/src/layout/dock/Files.ts
++++ b/app/src/layout/dock/Files.ts
+@@ -122,6 +122,8 @@ export class Files extends Model {
+         <svg><use xlink:href="#iconContract"></use></svg>
+     </span>
+     <div class="fn__space${window.siyuan.config.readonly ? " fn__none" : ""}"></div>
++    <span data-type="newNoteBook" class="block__icon b3-tooltips b3-tooltips__sw" aria-label="New NoteBook"><svg><use xlink:href='#iconFilesRoot'></use></svg></span>
++    <span class="fn__space"></span>
+     <div data-type="more" class="b3-tooltips b3-tooltips__sw block__icon${window.siyuan.config.readonly ? " fn__none" : ""}" aria-label="${window.siyuan.languages.more}">
+         <svg><use xlink:href="#iconMore"></use></svg>
+     </div> 
+@@ -198,6 +200,11 @@ export class Files extends Model {
+             }
+         });
+         // 为了快捷键的 dispatch
++        this.actionsElement.querySelector('[data-type="newNoteBook"]').addEventListener("click", () => {
++            if (!window.siyuan.config.readonly) {
++                newNotebook();
++            }
++        });
+         this.actionsElement.querySelector('[data-type="collapse"]').addEventListener("click", () => {
+             Array.from(this.element.children).forEach(item => {
+                 const liElement = item.firstElementChild;
+@@ -1263,15 +1270,15 @@ aria-label="${ariaLabel}">${getDisplayName(item.name, true, true)}</span>
+ 
+     private initMoreMenu() {
+         window.siyuan.menus.menu.remove();
+-        if (!window.siyuan.config.readonly) {
+-            window.siyuan.menus.menu.append(new MenuItem({
+-                icon: "iconFilesRoot",
+-                label: window.siyuan.languages.newNotebook,
+-                click: () => {
+-                    newNotebook();
+-                }
+-            }).element);
+-        }
++        // if (!window.siyuan.config.readonly) {
++        //     window.siyuan.menus.menu.append(new MenuItem({
++        //         icon: "iconFilesRoot",
++        //         label: window.siyuan.languages.newNotebook,
++        //         click: () => {
++        //             newNotebook();
++        //         }
++        //     }).element);
++        // }
+         window.siyuan.menus.menu.append(new MenuItem({
+             icon: "iconRefresh",
+             label: window.siyuan.languages.rebuildIndex,
+diff --git a/app/src/protyle/hint/index.ts b/app/src/protyle/hint/index.ts
+index 72adbf4cf..f69923c2c 100644
+--- a/app/src/protyle/hint/index.ts
++++ b/app/src/protyle/hint/index.ts
+@@ -366,7 +366,7 @@ ${genHintItemHTML(item)}
+ 
+         const panelElement = this.element.querySelector(".emojis__panel");
+         if (panelElement) {
+-            panelElement.innerHTML = filterEmoji(value, 256);
++            panelElement.innerHTML = filterEmoji(value, "slash_hint", 256);
+             if (value) {
+                 panelElement.nextElementSibling.classList.add("fn__none");
+             } else {
+@@ -376,7 +376,7 @@ ${genHintItemHTML(item)}
+         } else {
+             // max-height：min(402px,40vh) 和 .protyle-hint 保持一致，否则 emoji 不显示底部导航
+             this.element.innerHTML = `<div style="padding:0;max-height:min(402px,40vh);width:366px" class="emojis">
+-<div class="emojis__panel">${filterEmoji(value, 256)}</div>
++<div class="emojis__panel">${filterEmoji(value, "slash_hint", 256)}</div>
+ <div class="fn__flex${value ? " fn__none" : ""}">
+     ${[
+                 ["2b50", window.siyuan.languages.recentEmoji],
 diff --git a/app/src/types/config.d.ts b/app/src/types/config.d.ts
 index be656bd5a..162a3b8c0 100644
 --- a/app/src/types/config.d.ts
@@ -4215,7 +4291,7 @@ index 146039d74..94e5a3e12 100644
 +  result?: IAVCellValue;
  }
 diff --git a/kernel/conf/appearance.go b/kernel/conf/appearance.go
-index ebd1002ac..d8e17a687 100644
+index ebd1002ac..c726c1f1e 100644
 --- a/kernel/conf/appearance.go
 +++ b/kernel/conf/appearance.go
 @@ -33,6 +33,9 @@ type Appearance struct {
@@ -4234,7 +4310,7 @@ index ebd1002ac..d8e17a687 100644
  		Lang:                "en_US",
 +		RemoteIconProvider:	 "",
 +		IconFinderAPIKey:	 "",
-+		FlatIconAPIKey:	     "",
++		FlatIconAPIKey:	 	 "",
  		CloseButtonBehavior: 0,
  		HideStatusBar:       false,
  	}
