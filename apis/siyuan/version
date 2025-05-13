@@ -1,16 +1,17 @@
 {
   "checksums": {
-    "siyuan-v3.1.28-linux.tar.gz": "fd37226f04b40b2e3aec0d0fd50bd52059d59d825e15a61a73d7570f6fdeacc4",
-    "siyuan-v3.1.28-mac-arm64.dmg": "93c23e873b4cf791898e7abd3f9e8d629c450a0d13b6c23ce8e3eea1d85caeea",
-    "siyuan-v3.1.28-mac.dmg": "9e838e9da4aa7ec2d70a143e0dc021f319b52e6c9a9dd2cc8668d727867dede1",
-    "siyuan-v3.1.28-win.exe": "e61702141bff5ffae4894984c1e4a245f3755a8ec40077a3b48d88dd93aef90c"
+    "siyuan-v3.1.29-ios.ipa": "8c2e3cfea92a336bbeff8dd2f60acdfd51264ff5531ae8eac20e03b8eb02f4cf",
+    "siyuan-v3.1.29-linux.tar.gz": "cf2b1857cfc010f25bbc6d781c49a47614ce920ee9747e8816b983208582fd5e",
+    "siyuan-v3.1.29-mac-arm64.dmg": "b680a85bb8cafbb07ed85b5a91dc27a23b065179d0e3ef4c8b732e021fea0cd1",
+    "siyuan-v3.1.29-mac.dmg": "452f605554c5fd3ca47ae770ac0a92fb2ec3cb8b0fe7dd59f97b72235bcc1b1a",
+    "siyuan-v3.1.29-win.exe": "a3cbee5155dc7fa2c72387001be811d66acbd178a6e6399fab664159631edd8d"
   },
-  "release_en_US": "https://github.com/golabol/my-siyuan/releases/tag/v3.1.28",
-  "ver": "3.1.28",
+  "release_en_US": "https://github.com/golabol/my-siyuan/releases/tag/v3.1.29",
+  "ver": "3.1.29",
   "r": "wz3zjPO1YohLl14e",
-  "release": "https://github.com/golabol/my-siyuan/releases/tag/v3.1.28",
-  "release_zh_CN": "https://github.com/golabol/my-siyuan/releases/tag/v3.1.28",
-  "installPkg": "https://github.com/golabol/my-siyuan/releases/download/v3.1.28/",
+  "release": "https://github.com/golabol/my-siyuan/releases/tag/v3.1.29",
+  "release_zh_CN": "https://github.com/golabol/my-siyuan/releases/tag/v3.1.29",
+  "installPkg": "https://github.com/golabol/my-siyuan/releases/download/v3.1.29/",
   "bazaar": "2b3909b84e01bbdabc22607bc4bca79160188cce",
   "announcement": []
 }
