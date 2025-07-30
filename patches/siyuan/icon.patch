@@ -88,7 +88,7 @@ index 5fe29ffaf..7b63ebd7a 100644
                      icon: "iconFiles",
                      hotkeyLangId: "fileTree",
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..078386a93 100644
+index df3f8baf7..56b4e80c5 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
 @@ -1,5 +1,5 @@
@@ -121,12 +121,21 @@ index df3f8baf7..078386a93 100644
  export const getRandomEmoji = () => {
      const emojis = window.siyuan.emojis[getRandom(0, window.siyuan.emojis.length - 1)];
      if (typeof emojis.items[getRandom(0, emojis.items.length - 1)] === "undefined") {
+@@ -31,7 +47,7 @@ export const unicode2Emoji = (unicode: string, className = "", needSpan = false,
+         emoji = `<img class="${className}" ${lazy ? "data-" : ""}src="/emojis/${unicode}"/>`;
+     } else {
+         try {
+-            unicode.split("-").forEach(item => {
++            (unicode || "").split("-").forEach(item => {
+                 if (item.length < 5) {
+                     emoji += String.fromCodePoint(parseInt("0" + item, 16));
+                 } else {
 @@ -85,7 +101,7 @@ export const lazyLoadEmojiImg = (element: Element) => {
      });
  };
  
 -export const filterEmoji = (key = "", max?: number) => {
-+export const filterEmoji = async (key = "", max?: number, triggered_by: "slash_hint" | "doc_notebook" | "emoji_hint" = "doc_notebook") => {
++export const filterEmoji = async (key = "", max?: number, triggered_by: "slash_hint" | "doc_notebook" = "doc_notebook") => {
      let html = "";
      const recentEmojis: IEmojiItem[] = [];
      if (key) {
@@ -140,7 +149,65 @@ index df3f8baf7..078386a93 100644
      window.siyuan.emojis.forEach((category, index) => {
          if (!key) {
              html += `<div class="emojis__title" data-type="${index + 1}">${getEmojiTitle(index)}</div><div style="min-height:${index === 0 ? "30px" : "300px"}" class="emojis__content"${index > 1 ? ' data-index="' + index + '"' : ""}>`;
-@@ -143,6 +162,8 @@ ${unicode2Emoji(emoji.unicode, undefined, false, true)}</button>`;
+@@ -102,40 +121,40 @@ export const filterEmoji = (key = "", max?: number) => {
+             html += `<div style="margin-left: 4px">${window.siyuan.languages.setEmojiTip}</div>`;
+         }
+ 
+-        category.items.forEach(emoji => {
++        (category.items || []).forEach((emoji: IEmojiItem) => {
+             if (key) {
+-                if (window.siyuan.config.editor.emoji.includes(emoji.unicode) &&
+-                    (unicode2Emoji(emoji.unicode) === key ||
+-                        emoji.keywords.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
+-                        emoji.description.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
+-                        emoji.description_zh_cn.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
+-                        emoji.description_ja_jp.toLowerCase().indexOf(key.toLowerCase()) > -1)
++                if ((window.siyuan.config.editor.emoji || []).includes(emoji.unicode || '') &&
++                    (unicode2Emoji(emoji.unicode || '') === key ||
++                        (emoji.keywords || '').toLowerCase().indexOf(key.toLowerCase()) > -1 ||
++                        (emoji.description || '').toLowerCase().indexOf(key.toLowerCase()) > -1 ||
++                        (emoji.description_zh_cn || '').toLowerCase().indexOf(key.toLowerCase()) > -1 ||
++                        (emoji.description_ja_jp || '').toLowerCase().indexOf(key.toLowerCase()) > -1)
+                 ) {
+                     recentEmojis.push(emoji);
+                 }
+                 if (max && maxCount > max) {
+                     return;
+                 }
+-                if (unicode2Emoji(emoji.unicode) === key ||
+-                    emoji.keywords.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
+-                    emoji.description.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
+-                    emoji.description_zh_cn.toLowerCase().indexOf(key.toLowerCase()) > -1 ||
+-                    emoji.description_ja_jp.toLowerCase().indexOf(key.toLowerCase()) > -1) {
++                if (unicode2Emoji(emoji.unicode || '') === key ||
++                    (emoji.keywords || '').toLowerCase().indexOf(key.toLowerCase()) > -1 ||
++                    (emoji.description || '').toLowerCase().indexOf(key.toLowerCase()) > -1 ||
++                    (emoji.description_zh_cn || '').toLowerCase().indexOf(key.toLowerCase()) > -1 ||
++                    (emoji.description_ja_jp || '').toLowerCase().indexOf(key.toLowerCase()) > -1) {
+                     if (category.id === "custom") {
+                         customStore.push(emoji);
+                     } else {
+-                        keyHTML += `<button data-unicode="${emoji.unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(emoji)}">
+-${unicode2Emoji(emoji.unicode, undefined, false, true)}</button>`;
++                        keyHTML += `<button data-unicode="${emoji.unicode || ''}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(emoji)}">
++${unicode2Emoji(emoji.unicode || '', undefined, false, true)}</button>`;
+                     }
+                     maxCount++;
+                 }
+             } else {
+-                if (window.siyuan.config.editor.emoji.includes(emoji.unicode)) {
++                if ((window.siyuan.config.editor.emoji || []).includes(emoji.unicode || '')) {
+                     recentEmojis.push(emoji);
+                 }
+                 if (index < 2) {
+-                    html += `<button data-unicode="${emoji.unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(emoji)}">
+-${unicode2Emoji(emoji.unicode, undefined, false, true)}</button>`;
++                    html += `<button data-unicode="${emoji.unicode || ''}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(emoji)}">
++${unicode2Emoji(emoji.unicode || '', undefined, false, true)}</button>`;
+                 }
+             }
+         });
+@@ -143,35 +162,141 @@ ${unicode2Emoji(emoji.unicode, undefined, false, true)}</button>`;
              html += "</div>";
          }
      });
@@ -148,8 +215,27 @@ index df3f8baf7..078386a93 100644
 +    // Process custom emojis
      if (key) {
          customStore.sort((a, b) => {
-             const aKeywords = a.keywords.split("/");
-@@ -164,6 +185,110 @@ ${unicode2Emoji(item.unicode, undefined, false, true)}</button>`;
+-            const aKeywords = a.keywords.split("/");
+-            const bKeywords = b.keywords.split("/");
++            const aKeywords = (a.keywords || "").split("/");
++            const bKeywords = (b.keywords || "").split("/");
+             if (aKeywords[aKeywords.length - 1].toLowerCase().indexOf(key.toLowerCase()) < bKeywords[bKeywords.length - 1].toLowerCase().indexOf(key.toLowerCase())) {
+                 return -1;
+             }
+             return 0;
+         }).sort((a, b) => {
+-            const aKeywords = a.keywords.split("/");
+-            const bKeywords = b.keywords.split("/");
++            const aKeywords = (a.keywords || "").split("/");
++            const bKeywords = (b.keywords || "").split("/");
+             if (aKeywords[aKeywords.length - 1].toLowerCase().indexOf(key.toLowerCase()) === bKeywords[bKeywords.length - 1].toLowerCase().indexOf(key.toLowerCase()) && aKeywords[aKeywords.length - 1].length < bKeywords[bKeywords.length - 1].length) {
+                 return -1;
+             }
+             return 0;
+         }).forEach(item => {
+             html += `<button data-unicode="${item.unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(item)}">
+-${unicode2Emoji(item.unicode, undefined, false, true)}</button>`;
++${unicode2Emoji(item.unicode || '', undefined, false, true)}</button>`;
          });
          html = html + keyHTML + "</div>";
      }
@@ -167,11 +253,11 @@ index df3f8baf7..078386a93 100644
 +                            externalIconsContent += '<div class="fn__hr"></div>';
 +
 +                            externalIcons.forEach((icon) => {
-+                                const urls = extractUrlsFromKeywords(icon.keywords);
-+                                if (urls) {
++                                const urls = extractUrlsFromKeywords(icon.keywords || "");
++                                if (urls && urls.previewUrl) {
 +                                    externalIconsContent += `<button 
-+                  data-unicode="${icon.unicode}"
-+                  data-download-url="${urls.downloadUrl}"
++                  data-unicode="${icon.unicode || ''}"
++                  data-download-url="${urls.downloadUrl || ''}"
 +                  class="emojis__item ariaLabel" 
 +                  onmouseover="this.style.border='0.5px solid var(--b3-theme-on-background)'"
 +                  onmouseout="this.style.border='none'"
@@ -197,11 +283,11 @@ index df3f8baf7..078386a93 100644
 +                            externalIconsContent += '<div class="fn__hr"></div>';
 +
 +                            externalIcons.forEach((icon) => {
-+                                const urls = extractUrlsFromKeywords(icon.keywords);
++                                const urls = extractUrlsFromKeywords(icon.keywords || "");
 +                                if (urls) {
 +                                    externalIconsContent += `<button 
-+                  data-unicode="${icon.unicode}"
-+                  data-download-url="${urls.downloadUrl}"
++                  data-unicode="${icon.unicode || ''}"
++                  data-download-url="${urls.downloadUrl || ''}"
 +                  class="emojis__item ariaLabel" 
 +                  onmouseover="this.style.border='0.5px solid var(--b3-theme-on-background)'"
 +                  onmouseout="this.style.border='none'"
@@ -233,11 +319,11 @@ index df3f8baf7..078386a93 100644
 +                        externalIconsContent += '<div class="fn__hr"></div>';
 +
 +                        externalIcons.forEach((icon) => {
-+                            const urls = extractUrlsFromKeywords(icon.keywords);
++                            const urls = extractUrlsFromKeywords(icon.keywords || "");
 +                            if (urls) {
 +                                externalIconsContent += `<button 
-+                data-unicode="${icon.unicode}"
-+                data-download-url="${urls.downloadUrl}"
++                data-unicode="${icon.unicode || ''}"
++                data-download-url="${urls.downloadUrl || ''}"
 +                class="emojis__item ariaLabel" 
 +                onmouseover="this.style.border='0.5px solid var(--b3-theme-on-background)'"
 +                onmouseout="this.style.border='none'"
@@ -260,6 +346,17 @@ index df3f8baf7..078386a93 100644
      let recentHTML = "";
      if (recentEmojis.length > 0) {
          recentHTML = `<div class="emojis__title" data-type="0">${window.siyuan.languages.recentEmoji}</div><div class="emojis__content">`;
+-        window.siyuan.config.editor.emoji.forEach(emojiUnicode => {
++        (window.siyuan.config.editor.emoji || []).forEach(emojiUnicode => {
+             const emoji = recentEmojis.filter((item) => item.unicode === emojiUnicode);
+             if (emoji[0]) {
+-                recentHTML += `<button data-unicode="${emoji[0].unicode}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(emoji[0])}">
+-${unicode2Emoji(emoji[0].unicode, undefined, false, true)}
++                recentHTML += `<button data-unicode="${emoji[0].unicode || ''}" class="emojis__item ariaLabel" aria-label="${getEmojiDesc(emoji[0])}">
++${unicode2Emoji(emoji[0].unicode || '', undefined, false, true)}
+ </button>`;
+             }
+         });
 @@ -229,7 +354,7 @@ const renderEmojiContent = (previousIndex: string, previousContentElement: Eleme
      previousContentElement.removeAttribute("style");
  };
@@ -311,7 +408,7 @@ index df3f8baf7..078386a93 100644
          lazyLoadEmojiImg(dialog.element);
 -    });
 -    emojiSearchInputElement.addEventListener("input", (event: InputEvent) => {
-+    }, 500); // 500ms debounce delay
++    }, 1000); // 1000ms debounce delay
 +
 +    // Update the input event listener
 +    emojiSearchInputElement.addEventListener("input", async (event: InputEvent) => {
@@ -392,66 +489,18 @@ index df3f8baf7..078386a93 100644
                      dialog.destroy();
                  } else if (target.classList.contains("emoji__dynamic-item")) {
                      unicode = target.getAttribute("src");
-@@ -757,3 +922,239 @@ export const reloadEmoji = () => {
+@@ -757,3 +922,320 @@ export const reloadEmoji = () => {
          });
      });
  };
 +
-+function getIconUrls(icon: IIconFinderResponseIcon | IIcon8ResponseIcon | IFlatIconDataItem, targetSize: number = 256): { downloadUrl: string; previewUrl: string } {
-+    if ("download_url" in icon) {
-+        const finderIcon = icon as IIconFinderResponseIcon;
-+        // Sort raster_sizes by size, closest to target first
-+        const sizes = finderIcon.raster_sizes.sort((a, b) => {
-+            const aDiff = Math.abs(a.size - targetSize);
-+            const bDiff = Math.abs(b.size - targetSize);
-+            return aDiff - bDiff;
-+        });
-+
-+        // Find first size that has PNG format
-+        for (const size of sizes) {
-+            const pngFormat = size.formats.find((f) => f.format === "png");
-+            if (pngFormat) {
-+                return {
-+                    downloadUrl: pngFormat.download_url,
-+                    previewUrl: pngFormat.preview_url,
-+                };
-+            }
-+        }
-+
-+        // Fallback to first available format if no PNG found
-+        const firstSize = sizes[0];
-+        return {
-+            downloadUrl: firstSize.formats[0].download_url,
-+            previewUrl: firstSize.formats[0].preview_url,
-+        };
-+    } else if ("free_svg" in icon) {
-+        const flatIcon = icon as IFlatIconDataItem;
-+        // Extract thumbnail URL closest to target size
-+        const thumbnails = flatIcon.thumbnails.sort((a, b) => {
-+            const aDiff = Math.abs(a.width - targetSize);
-+            const bDiff = Math.abs(b.width - targetSize);
-+            return aDiff - bDiff;
-+        });
-+
-+        const thumbnailUrl = thumbnails[0]?.url;
-+
-+        return {
-+            downloadUrl: `https://api.freepik.com/v1/icons/${flatIcon.id}/download`,
-+            previewUrl: thumbnailUrl,
-+        };
-+    } else {
-+        const icon8Icon = icon as IIcon8ResponseIcon;
-+
-+        return {
-+            downloadUrl: `https://img.icons8.com/?id=${icon8Icon.id}&format=png&size=${targetSize}&name=icons8-${icon8Icon.name.toLowerCase()}-${targetSize}.png&fromSite=true`,
-+            previewUrl: `https://img.icons8.com/?id=${icon8Icon.id}&format=png&size=${targetSize}&name=icons8-${icon8Icon.name.toLowerCase()}-${targetSize}.png&fromSite=true`,
-+        };
-+    }
-+}
-+
 +export const searchIconFinder = async (query: string, maxResults: number = 20): Promise<IEmojiItem[]> => {
 +    try {
 +        const ICONFINDER_API_KEY = window.siyuan.config.appearance.iconFinderAPIKey;
++        if (!ICONFINDER_API_KEY || ICONFINDER_API_KEY.trim() === "") { // Added explicit check
++            console.warn("IconFinder API Key is not configured.");
++            return [];
++        }
 +        const response = await fetch(`https://api.iconfinder.com/v4/icons/search?query=${encodeURIComponent(query)}&count=${maxResults}&premium=0`, {
 +            headers: {
 +                Authorization: `Bearer ${ICONFINDER_API_KEY}`,
@@ -463,23 +512,30 @@ index df3f8baf7..078386a93 100644
 +        }
 +
 +        const data: IIconFinderResponse = await response.json();
++        // Defensive check: ensure data.icons exists and is an array
++        const nonPremiumIcons = (data.icons || []).filter((icon) => !icon?.is_premium); // Added check for icon existence and is_premium
 +
-+        // Filter non-premium icons
-+        const nonPremiumIcons = data.icons.filter((icon) => !icon.is_premium);
++        const transformedIcons = nonPremiumIcons.map((icon): IEmojiItem => {
++            // Defensive check: Ensure icon.tags exists and is an array
++            const tags = Array.isArray(icon?.tags) ? icon.tags : []; // Added icon?.
++            const joinedTags = tags.join(", ");
++            const joinedKeywords = tags.join(" ");
 +
-+        // Convert to IEmojiItem format
-+        return nonPremiumIcons.map((icon): IEmojiItem => {
-+            const urls = getIconUrls(icon);
-+            const urlData = `${urls.downloadUrl}|${urls.previewUrl}`;
++            const urls = getIconUrls(icon); // getIconUrls is now more robust
++            const downloadUrl = urls?.downloadUrl || ""; // Defensive read
++            const previewUrl = urls?.previewUrl || "";   // Defensive read
++            const urlData = `${downloadUrl}|${previewUrl}`;
 +
 +            return {
-+                unicode: `external-${icon.icon_id}`,
-+                description: icon.tags.join(", "),
-+                description_zh_cn: icon.tags.join(", "),
-+                description_ja_jp: icon.tags.join(", "),
-+                keywords: `${icon.tags.join(" ")} __url__${urlData}`,
++                unicode: `external-${icon?.icon_id || Array(12).fill('').map(() => (Math.random() * 36).toString(36)[Math.floor(Math.random() * 36)]).join('')}`, // Fallback for icon_id
++                description: joinedTags,
++                description_zh_cn: joinedTags,
++                description_ja_jp: joinedTags,
++                keywords: `${joinedKeywords} __url__${urlData}`,
 +            };
 +        });
++
++        return transformedIcons;
 +    } catch (error) {
 +        console.error("IconFinder search failed:", error);
 +        return [];
@@ -496,24 +552,31 @@ index df3f8baf7..078386a93 100644
 +
 +        const data: IIcon8Response = await response.json();
 +
-+        // Filter non-premium icons
-+        const nonPremiumIcons = data.icons.filter((icon) => {
-+            if ("free" in icon && icon.free !== null) {
++        // Filter non-premium icons (defensive access to data.icons)
++        const nonPremiumIcons = (data.icons || []).filter((icon) => { // Added data.icons || []
++            if (icon && "free" in icon && icon.free !== null) { // Added icon check
 +                return icon.free === true;
 +            } else {
-+                return true;
++                return true; // Assume free if 'free' property is missing or unexpected
 +            }
 +        });
 +
 +        const icons = nonPremiumIcons.map((icon): IEmojiItem => {
-+            const urls = getIconUrls(icon);
-+            const urlData = `${urls.downloadUrl}|${urls.previewUrl}`;
++            const urls = getIconUrls(icon); // getIconUrls handles icon.name.toLowerCase() defensively
++            const downloadUrl = urls?.downloadUrl || ""; // Defensive read
++            const previewUrl = urls?.previewUrl || "";   // Defensive read
++            const urlData = `${downloadUrl}|${previewUrl}`;
++
++            // Defensive check for icon.name and icon.id
++            const iconName = icon?.name || "";
++            const iconId = icon?.id || Array(12).fill('').map(() => (Math.random() * 36).toString(36)[Math.floor(Math.random() * 36)]).join(''); // Fallback for icon.id
++
 +            return {
-+                unicode: `external-${icon.id}`,
-+                description: icon.name,
-+                description_zh_cn: icon.name,
-+                description_ja_jp: icon.name,
-+                keywords: `${icon.name} __url__${urlData}`,
++                unicode: `external-${iconId}`,
++                description: iconName,
++                description_zh_cn: iconName,
++                description_ja_jp: iconName,
++                keywords: `${iconName} __url__${urlData}`,
 +            };
 +        });
 +        return icons;
@@ -525,10 +588,15 @@ index df3f8baf7..078386a93 100644
 +
 +const searchFlatIcon = async (query: string, maxResults: number = 20): Promise<IEmojiItem[]> => {
 +    try {
++        const FLAT_ICON_API_KEY = window.siyuan.config.appearance.flatIconAPIKey;
++        if (!FLAT_ICON_API_KEY || FLAT_ICON_API_KEY.trim() === "") { // Added explicit check
++            console.warn("FlatIcon API Key is not configured.");
++            return [];
++        }
 +        // thumbnail_size
-+        const response = await fetch(`https://api.flaticon.com/v1/icons?query=${encodeURIComponent(query)}`, {
++        const response = await fetch(`https://api.freepik.com/v1/icons?term=${encodeURIComponent(query)}`, {
 +            headers: {
-+                "x-freepik-api-key": `Bearer ${window.siyuan.config.appearance.flatIconAPIKey}`,
++                "x-freepik-api-key": `${FLAT_ICON_API_KEY}`,
 +            },
 +        });
 +
@@ -538,15 +606,23 @@ index df3f8baf7..078386a93 100644
 +
 +        const data: IFlatIconResponse = await response.json();
 +
-+        return data.data.map((icon): IEmojiItem => {
++        // Defensive check for data.data
++        return (data.data || []).map((icon): IEmojiItem => { // Added data.data || []
 +            const urls = getIconUrls(icon);
-+            const urlData = `${urls.downloadUrl}|${urls.previewUrl}`;
++            const downloadUrl = urls?.downloadUrl || ""; // Defensive read
++            const previewUrl = urls?.previewUrl || "";   // Defensive read
++            const urlData = `${downloadUrl}|${previewUrl}`;
++
++            // Defensive check for icon.name and icon.id
++            const iconName = icon?.name || "";
++            const iconId = icon?.id || Array(12).fill('').map(() => (Math.random() * 36).toString(36)[Math.floor(Math.random() * 36)]).join(''); // Fallback for icon.id
++
 +            return {
-+                unicode: `external-${icon.id}`,
-+                description: icon.name,
-+                description_zh_cn: icon.name,
-+                description_ja_jp: icon.name,
-+                keywords: `${icon.name} __url__${urlData}`,
++                unicode: `external-${iconId}`,
++                description: iconName,
++                description_zh_cn: iconName,
++                description_ja_jp: iconName,
++                keywords: `${iconName} __url__${urlData}`,
 +            };
 +        }).slice(0, maxResults);
 +    } catch (error) {
@@ -556,11 +632,12 @@ index df3f8baf7..078386a93 100644
 +};
 +
 +function extractUrlsFromKeywords(keywords: string): { downloadUrl: string; previewUrl: string } | null {
-+    const urlMatch = keywords.match(/__url__(.*?)\|(.*?)(?:\s|$)/);
++    // Ensure keywords is a string before calling match
++    const urlMatch = (keywords || '').match(/__url__(.*?)\|(.*?)(?:\s|$)/); // Added (keywords || '')
 +    if (urlMatch) {
 +        return {
-+            downloadUrl: urlMatch[1],
-+            previewUrl: urlMatch[2],
++            downloadUrl: urlMatch[1] || "", // Ensure returned strings are not undefined
++            previewUrl: urlMatch[2] || "",  // Ensure returned strings are not undefined
 +        };
 +    }
 +    return null;
@@ -572,46 +649,70 @@ index df3f8baf7..078386a93 100644
 +
 +        // Check if already exists first
 +        try {
++            // Defensive check before fetchSyncPost for path
++            if (!assetPath) {
++                throw new Error("Asset path is undefined or empty.");
++            }
 +            const getFileResponse = await fetchSyncPost("/api/file/getFile", {
 +                path: assetPath,
 +            });
 +            if (getFileResponse.code === 200) {
-+                return getFileResponse.data.path;
++                return getFileResponse.data?.path || null; // Defensive read
 +            }
-+        } catch {
-+            // File doesn't exist, continue with download
++        } catch (e) {
++            // File doesn't exist or other error, continue with download
++            // console.warn("Local file check failed, proceeding with download:", e); // Optional: add warning
 +        }
 +
 +        // Download the icon
-+        let response: Response | null;
++        let response: Response | null = null;
 +        if (window.siyuan.config.appearance.remoteIconProvider === "iconFinder") {
++            const ICONFINDER_API_KEY = window.siyuan.config.appearance.iconFinderAPIKey;
++            if (!ICONFINDER_API_KEY) throw new Error("IconFinder API Key is missing."); // Redundant check, but adds robustness
 +            response = await fetch(iconUrl, {
 +                headers: {
-+                    Authorization: `Bearer ${window.siyuan.config.appearance.iconFinderAPIKey}`,
++                    Authorization: `Bearer ${ICONFINDER_API_KEY}`,
 +                },
 +            });
 +        } else if (window.siyuan.config.appearance.remoteIconProvider === "icon8") {
 +            response = await fetch(iconUrl);
 +        } else if (window.siyuan.config.appearance.remoteIconProvider === "flatIcon") {
-+            response = await fetch(iconUrl, {
++            const FLAT_ICON_API_KEY = window.siyuan.config.appearance.flatIconAPIKey;
++            if (!FLAT_ICON_API_KEY) throw new Error("FlatIcon API Key is missing."); // Redundant check, but adds robustness
++            const flatIconDownloadResponse = await fetch(iconUrl, {
 +                headers: {
-+                    "x-freepik-api-key": `Bearer ${window.siyuan.config.appearance.flatIconAPIKey}`,
++                    "x-freepik-api-key": `${FLAT_ICON_API_KEY}`,
 +                },
 +            });
++
++            if (!flatIconDownloadResponse.ok) {
++                throw new Error(`FlatIcon download URL API error: ${flatIconDownloadResponse.status} ${flatIconDownloadResponse.statusText}`);
++            }
++
++            const flatIconDownloadData = await flatIconDownloadResponse.json();
++            // Assuming the structure is {"data":{"filename":"man","url":"..."}}
++            const actualDownloadUrl = flatIconDownloadData.data?.url;
++            if (!actualDownloadUrl) {
++                throw new Error("FlatIcon did not return a valid download URL.");
++            }
++            response = await fetch(actualDownloadUrl);
 +        }
 +
 +        if (response === null) {
-+            throw new Error("Failed to fetch icon URL");
++            throw new Error("Failed to determine icon provider for download or response is null.");
 +        }
 +        if (!response.ok) {
-+            throw new Error("Failed to download icon");
++            throw new Error(`Failed to download icon: ${response.status} ${response.statusText}`);
 +        }
 +
 +        const blob = await response.blob();
 +        const formData = new FormData();
 +
-+        // Set up form data for upload
-+        formData.append("file[]", new File([blob], `external-${iconId}.png`, { type: "image/png" }));
++        // Defensive checks for file name and type
++        const fileName = `external-${iconId}.png`;
++        const fileType = blob.type.startsWith("image/") ? blob.type : "image/png"; // Default to png if type is ambiguous
++
++        formData.append("file[]", new File([blob], fileName, { type: fileType }));
 +        formData.append("assetsDirPath", "/emojis/external/");
 +
 +        const uploadAssetResponse = await fetchSyncPost(
@@ -619,19 +720,96 @@ index df3f8baf7..078386a93 100644
 +            formData
 +        );
 +        if (uploadAssetResponse.code === 0) {
-+            const succMap = uploadAssetResponse.data.succMap;
-+            const paths = Object.values(succMap);
++            const succMap = uploadAssetResponse.data?.succMap; // Defensive read
++            const paths = succMap ? Object.values(succMap) : []; // Defensive read
 +            if (paths && paths.length > 0) {
-+            return paths[0];
++                return paths[0] || null; // Ensure not undefined
 +            } else {
-+            return null;
++                return null;
 +            }
++        } else {
++            console.error("Asset upload failed:", uploadAssetResponse.msg); // Log error message from backend
++            return null;
 +        }
 +    } catch (error) {
 +        console.error("Failed to download and store icon:", error);
-+        throw error;
++        // Re-throw if it's a critical error or handle as per application's error policy
++        return null;
 +    }
 +};
++
++function getIconUrls(icon: IIconFinderResponseIcon | IIcon8ResponseIcon | IFlatIconDataItem, targetSize: number = 256): { downloadUrl: string; previewUrl: string } {
++    // --- ICONFINDER BRANCH ---
++    // Identify IconFinder icons by checking for the 'raster_sizes' property at the top level
++    if ('raster_sizes' in icon && Array.isArray(icon.raster_sizes)) {
++        const finderIcon = icon as IIconFinderResponseIcon;
++        // Defensive check for raster_sizes before sorting
++        const sizes = Array.isArray(finderIcon.raster_sizes) ? finderIcon.raster_sizes.sort((a, b) => {
++            const aSize = a?.size || 0; // Defensive read
++            const bSize = b?.size || 0; // Defensive read
++            return Math.abs(aSize - targetSize) - Math.abs(bSize - targetSize);
++        }) : [];
++
++        for (const size of sizes) {
++            // Defensive check for size and formats array
++            if (size && Array.isArray(size.formats)) {
++                const pngFormat = size.formats.find((f) => f?.format === "png"); // Defensive read
++                if (pngFormat) {
++                    return {
++                        downloadUrl: pngFormat.download_url || "", // Ensure string
++                        previewUrl: pngFormat.preview_url || "",   // Ensure string
++                    };
++                }
++            }
++        }
++        // Fallback for IconFinder if no PNGs or formats are found
++        if (sizes.length > 0 && sizes[0] && Array.isArray(sizes[0].formats) && sizes[0].formats.length > 0) {
++            const firstFormat = sizes[0].formats[0];
++            return {
++                downloadUrl: firstFormat.download_url || "", // Ensure string
++                previewUrl: firstFormat.preview_url || "",   // Ensure string
++            };
++        } else {
++            console.warn('IconFinder: No suitable raster sizes or formats found for icon:', finderIcon);
++            return { downloadUrl: "", previewUrl: "" };
++        }
++    }
++    // --- FLATICON BRANCH ---
++    // Identify FlatIcon icons by checking for the 'free_svg' property at the top level
++    else if ('free_svg' in icon) {
++        const flatIcon = icon as IFlatIconDataItem;
++        // Defensive check for thumbnails array
++        const thumbnails = Array.isArray(flatIcon.thumbnails) ? flatIcon.thumbnails.sort((a, b) => {
++            const aWidth = a?.width || 0; // Defensive read
++            const bWidth = b?.width || 0; // Defensive read
++            return Math.abs(aWidth - targetSize) - Math.abs(bWidth - targetSize);
++        }) : [];
++
++        const thumbnailUrl = thumbnails[0]?.url || ""; // Defensive read and fallback
++
++        return {
++            downloadUrl: `https://api.freepik.com/v1/icons/${flatIcon.id || ''}/download`, // Defensive check for id
++            previewUrl: thumbnailUrl,
++        };
++    }
++    // --- ICON8 BRANCH (DEFAULT/FALLBACK) ---
++    // If it's neither IconFinder nor FlatIcon, assume it's an Icon8 icon.
++    // This needs to be the final 'else' if Icon8 doesn't have a truly unique top-level property
++    // that distinguishes it from ALL other potential incoming types.
++    else {
++        const icon8Icon = icon as IIcon8ResponseIcon;
++        // Defensive check for name before toLowerCase
++        const icon8Name = (icon8Icon.name || "").toLowerCase(); // Defensive read
++
++        // Ensure icon.id exists
++        const icon8Id = icon8Icon.id || getRandom(); // Fallback for id if missing
++
++        return {
++            downloadUrl: `https://img.icons8.com/?id=${icon8Id}&format=png&size=${targetSize}&name=icons8-${icon8Name}-${targetSize}.png&fromSite=true`,
++            previewUrl: `https://img.icons8.com/?id=${icon8Id}&format=png&size=${targetSize}&name=icons8-${icon8Name}-${targetSize}.png&fromSite=true`,
++        };
++    }
++}
 \ No newline at end of file
 diff --git a/app/src/layout/dock/Files.ts b/app/src/layout/dock/Files.ts
 index 07087e611..0f67be15d 100644
@@ -684,7 +862,7 @@ index 07087e611..0f67be15d 100644
              icon: "iconRefresh",
              label: window.siyuan.languages.rebuildIndex,
 diff --git a/app/src/protyle/hint/index.ts b/app/src/protyle/hint/index.ts
-index 336b9aa21..7e9a01819 100644
+index 336b9aa21..945bfc999 100644
 --- a/app/src/protyle/hint/index.ts
 +++ b/app/src/protyle/hint/index.ts
 @@ -372,48 +372,55 @@ ${genHintItemHTML(item)}
@@ -713,7 +891,7 @@ index 336b9aa21..7e9a01819 100644
 +
 +        const panelElement = this.element.querySelector(".emojis__panel");
 +        if (panelElement) {
-+            filterEmoji(value, 256, "emoji_hint").then(emojiHTML => {
++            filterEmoji(value, 256, "slash_hint").then(emojiHTML => {
 +                panelElement.innerHTML = emojiHTML;
 +                if (value) {
 +                    panelElement.nextElementSibling.classList.add("fn__none");
@@ -726,7 +904,7 @@ index 336b9aa21..7e9a01819 100644
 -            // max-height：min(402px,40vh) 和 .protyle-hint 保持一致，否则 emoji 不显示底部导航
 -            this.element.innerHTML = `<div style="padding:0;max-height:min(402px,40vh);width:366px" class="emojis">
 -<div class="emojis__panel">${filterEmoji(value, 256)}</div>
-+            filterEmoji(value, 256, "emoji_hint").then(emojiHTML => {
++            filterEmoji(value, 256, "slash_hint").then(emojiHTML => {
 +                // max-height：min(402px,40vh) 和 .protyle-hint 保持一致，否则 emoji 不显示底部导航
 +                this.element.innerHTML = `<div style="padding:0;max-height:min(402px,40vh);width:366px" class="emojis">
 +<div class="emojis__panel">${emojiHTML}</div>
