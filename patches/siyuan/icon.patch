@@ -88,7 +88,7 @@ index 5fe29ffaf..7b63ebd7a 100644
                      icon: "iconFiles",
                      hotkeyLangId: "fileTree",
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..27c9b00f2 100644
+index df3f8baf7..56b4e80c5 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
 @@ -1,5 +1,5 @@
@@ -489,7 +489,7 @@ index df3f8baf7..27c9b00f2 100644
                      dialog.destroy();
                  } else if (target.classList.contains("emoji__dynamic-item")) {
                      unicode = target.getAttribute("src");
-@@ -757,3 +922,308 @@ export const reloadEmoji = () => {
+@@ -757,3 +922,320 @@ export const reloadEmoji = () => {
          });
      });
  };
@@ -594,7 +594,7 @@ index df3f8baf7..27c9b00f2 100644
 +            return [];
 +        }
 +        // thumbnail_size
-+        const response = await fetch(`https://api.freepik.com/v1/icons?query=${encodeURIComponent(query)}`, {
++        const response = await fetch(`https://api.freepik.com/v1/icons?term=${encodeURIComponent(query)}`, {
 +            headers: {
 +                "x-freepik-api-key": `${FLAT_ICON_API_KEY}`,
 +            },
@@ -679,11 +679,23 @@ index df3f8baf7..27c9b00f2 100644
 +        } else if (window.siyuan.config.appearance.remoteIconProvider === "flatIcon") {
 +            const FLAT_ICON_API_KEY = window.siyuan.config.appearance.flatIconAPIKey;
 +            if (!FLAT_ICON_API_KEY) throw new Error("FlatIcon API Key is missing."); // Redundant check, but adds robustness
-+            response = await fetch(iconUrl, {
++            const flatIconDownloadResponse = await fetch(iconUrl, {
 +                headers: {
 +                    "x-freepik-api-key": `${FLAT_ICON_API_KEY}`,
 +                },
 +            });
++
++            if (!flatIconDownloadResponse.ok) {
++                throw new Error(`FlatIcon download URL API error: ${flatIconDownloadResponse.status} ${flatIconDownloadResponse.statusText}`);
++            }
++
++            const flatIconDownloadData = await flatIconDownloadResponse.json();
++            // Assuming the structure is {"data":{"filename":"man","url":"..."}}
++            const actualDownloadUrl = flatIconDownloadData.data?.url;
++            if (!actualDownloadUrl) {
++                throw new Error("FlatIcon did not return a valid download URL.");
++            }
++            response = await fetch(actualDownloadUrl);
 +        }
 +
 +        if (response === null) {
