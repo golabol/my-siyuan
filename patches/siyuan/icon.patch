@@ -88,7 +88,7 @@ index 5fe29ffaf..7b63ebd7a 100644
                      icon: "iconFiles",
                      hotkeyLangId: "fileTree",
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..43daa5f76 100644
+index df3f8baf7..27c9b00f2 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
 @@ -1,5 +1,5 @@
@@ -489,7 +489,7 @@ index df3f8baf7..43daa5f76 100644
                      dialog.destroy();
                  } else if (target.classList.contains("emoji__dynamic-item")) {
                      unicode = target.getAttribute("src");
-@@ -757,3 +922,305 @@ export const reloadEmoji = () => {
+@@ -757,3 +922,308 @@ export const reloadEmoji = () => {
          });
      });
  };
@@ -594,7 +594,7 @@ index df3f8baf7..43daa5f76 100644
 +            return [];
 +        }
 +        // thumbnail_size
-+        const response = await fetch(`https://api.flaticon.com/v1/icons?query=${encodeURIComponent(query)}`, {
++        const response = await fetch(`https://api.freepik.com/v1/icons?query=${encodeURIComponent(query)}`, {
 +            headers: {
 +                "x-freepik-api-key": `${FLAT_ICON_API_KEY}`,
 +            },
@@ -727,15 +727,15 @@ index df3f8baf7..43daa5f76 100644
 +};
 +
 +function getIconUrls(icon: IIconFinderResponseIcon | IIcon8ResponseIcon | IFlatIconDataItem, targetSize: number = 256): { downloadUrl: string; previewUrl: string } {
-+    if ("download_url" in icon) { // IconFinder
++    // --- ICONFINDER BRANCH ---
++    // Identify IconFinder icons by checking for the 'raster_sizes' property at the top level
++    if ('raster_sizes' in icon && Array.isArray(icon.raster_sizes)) {
 +        const finderIcon = icon as IIconFinderResponseIcon;
 +        // Defensive check for raster_sizes before sorting
 +        const sizes = Array.isArray(finderIcon.raster_sizes) ? finderIcon.raster_sizes.sort((a, b) => {
 +            const aSize = a?.size || 0; // Defensive read
 +            const bSize = b?.size || 0; // Defensive read
-+            const aDiff = Math.abs(aSize - targetSize);
-+            const bDiff = Math.abs(bSize - targetSize);
-+            return aDiff - bDiff;
++            return Math.abs(aSize - targetSize) - Math.abs(bSize - targetSize);
 +        }) : [];
 +
 +        for (const size of sizes) {
@@ -750,8 +750,7 @@ index df3f8baf7..43daa5f76 100644
 +                }
 +            }
 +        }
-+
-+        // Fallback: If no PNG format found or no sizes, return first available or empty
++        // Fallback for IconFinder if no PNGs or formats are found
 +        if (sizes.length > 0 && sizes[0] && Array.isArray(sizes[0].formats) && sizes[0].formats.length > 0) {
 +            const firstFormat = sizes[0].formats[0];
 +            return {
@@ -759,20 +758,19 @@ index df3f8baf7..43daa5f76 100644
 +                previewUrl: firstFormat.preview_url || "",   // Ensure string
 +            };
 +        } else {
-+            return {
-+                downloadUrl: "",
-+                previewUrl: "",
-+            };
++            console.warn('IconFinder: No suitable raster sizes or formats found for icon:', finderIcon);
++            return { downloadUrl: "", previewUrl: "" };
 +        }
-+    } else if ("free_svg" in icon) { // FlatIcon
++    }
++    // --- FLATICON BRANCH ---
++    // Identify FlatIcon icons by checking for the 'free_svg' property at the top level
++    else if ('free_svg' in icon) {
 +        const flatIcon = icon as IFlatIconDataItem;
 +        // Defensive check for thumbnails array
 +        const thumbnails = Array.isArray(flatIcon.thumbnails) ? flatIcon.thumbnails.sort((a, b) => {
 +            const aWidth = a?.width || 0; // Defensive read
 +            const bWidth = b?.width || 0; // Defensive read
-+            const aDiff = Math.abs(aWidth - targetSize);
-+            const bDiff = Math.abs(bWidth - targetSize);
-+            return aDiff - bDiff;
++            return Math.abs(aWidth - targetSize) - Math.abs(bWidth - targetSize);
 +        }) : [];
 +
 +        const thumbnailUrl = thumbnails[0]?.url || ""; // Defensive read and fallback
@@ -781,13 +779,18 @@ index df3f8baf7..43daa5f76 100644
 +            downloadUrl: `https://api.freepik.com/v1/icons/${flatIcon.id || ''}/download`, // Defensive check for id
 +            previewUrl: thumbnailUrl,
 +        };
-+    } else { // Icon8
++    }
++    // --- ICON8 BRANCH (DEFAULT/FALLBACK) ---
++    // If it's neither IconFinder nor FlatIcon, assume it's an Icon8 icon.
++    // This needs to be the final 'else' if Icon8 doesn't have a truly unique top-level property
++    // that distinguishes it from ALL other potential incoming types.
++    else {
 +        const icon8Icon = icon as IIcon8ResponseIcon;
 +        // Defensive check for name before toLowerCase
 +        const icon8Name = (icon8Icon.name || "").toLowerCase(); // Defensive read
 +
 +        // Ensure icon.id exists
-+        const icon8Id = icon8Icon.id || ''; // Fallback for id if missing
++        const icon8Id = icon8Icon.id || getRandom(); // Fallback for id if missing
 +
 +        return {
 +            downloadUrl: `https://img.icons8.com/?id=${icon8Id}&format=png&size=${targetSize}&name=icons8-${icon8Name}-${targetSize}.png&fromSite=true`,
