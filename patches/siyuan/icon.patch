@@ -11,7 +11,7 @@ index 3b2e753ef..b4718a8ca 100644
 -*.patch
 \ No newline at end of file
 diff --git a/app/src/config/appearance.ts b/app/src/config/appearance.ts
-index 1bf2892ea..f36839239 100644
+index 530a7064c..9054351e8 100644
 --- a/app/src/config/appearance.ts
 +++ b/app/src/config/appearance.ts
 @@ -119,35 +119,6 @@ export const appearance = {
@@ -72,13 +72,13 @@ index 1bf2892ea..f36839239 100644
 -            });
 -        });
      },
-     onSetAppearance(data: Config.IAppearance) {
+     onSetappearance(data: Config.IAppearance) {
          if (data.lang !== window.siyuan.config.appearance.lang) {
 diff --git a/app/src/constants.ts b/app/src/constants.ts
-index 7b63ebd7a..5fe29ffaf 100644
+index 80bf510e0..b028cb476 100644
 --- a/app/src/constants.ts
 +++ b/app/src/constants.ts
-@@ -601,7 +601,7 @@ export abstract class Constants {
+@@ -600,7 +600,7 @@ export abstract class Constants {
              data: [
                  [{
                      type: "file",
@@ -2341,7 +2341,7 @@ index 09e88a68d..df3f8baf7 100644
 +    });
  };
 diff --git a/app/src/layout/dock/Files.ts b/app/src/layout/dock/Files.ts
-index 0f67be15d..07087e611 100644
+index 19c0c1f1b..b9d691242 100644
 --- a/app/src/layout/dock/Files.ts
 +++ b/app/src/layout/dock/Files.ts
 @@ -127,8 +127,6 @@ export class Files extends Model {
@@ -2365,7 +2365,7 @@ index 0f67be15d..07087e611 100644
          this.actionsElement.querySelector('[data-type="collapse"]').addEventListener("click", () => {
              Array.from(this.element.children).forEach(item => {
                  const liElement = item.firstElementChild;
-@@ -1276,15 +1269,15 @@ aria-label="${ariaLabel}">${getDisplayName(item.name, true, true)}</span>
+@@ -1274,15 +1267,15 @@ aria-label="${ariaLabel}">${getDisplayName(item.name, true, true)}</span>
  
      private initMoreMenu() {
          window.siyuan.menus.menu.remove();
@@ -2391,10 +2391,10 @@ index 0f67be15d..07087e611 100644
              icon: "iconRefresh",
              label: window.siyuan.languages.rebuildIndex,
 diff --git a/app/src/protyle/hint/index.ts b/app/src/protyle/hint/index.ts
-index 945bfc999..336b9aa21 100644
+index 2312a9755..4d7b4364b 100644
 --- a/app/src/protyle/hint/index.ts
 +++ b/app/src/protyle/hint/index.ts
-@@ -372,55 +372,48 @@ ${genHintItemHTML(item)}
+@@ -364,55 +364,48 @@ ${genHintItemHTML(item)}
              return;
          }
  
@@ -2487,7 +2487,7 @@ index 945bfc999..336b9aa21 100644
      }
  
 diff --git a/app/src/types/config.d.ts b/app/src/types/config.d.ts
-index d7b75fb00..51c80a2d7 100644
+index 7bb6b5f8d..ff24807d5 100644
 --- a/app/src/types/config.d.ts
 +++ b/app/src/types/config.d.ts
 @@ -230,18 +230,6 @@ declare namespace Config {
@@ -2510,10 +2510,68 @@ index d7b75fb00..51c80a2d7 100644
           * List of installed light themes
           */
 diff --git a/app/src/types/index.d.ts b/app/src/types/index.d.ts
-index 94829a372..284e5e3c9 100644
+index 9b4cf0c5b..e7616d376 100644
 --- a/app/src/types/index.d.ts
 +++ b/app/src/types/index.d.ts
-@@ -426,118 +426,6 @@ interface IEmoji {
+@@ -51,20 +51,10 @@ type TOperation =
+     | "moveOutlineHeading"
+     | "updateAttrViewColRollup"
+     | "hideAttrViewName"
+-    | "setAttrViewCardSize"
+-    | "setAttrViewCardAspectRatio"
+-    | "setAttrViewCoverFrom"
+-    | "setAttrViewCoverFromAssetKeyID"
+-    | "setAttrViewFitImage"
+-    | "setAttrViewShowIcon"
+-    | "setAttrViewWrapField"
+     | "setAttrViewColDate"
+     | "unbindAttrViewBlock"
+     | "setAttrViewViewDesc"
+     | "setAttrViewColDesc"
+-    | "setAttrViewBlockView"
+-    | "setAttrViewGroup"
+-    | "syncAttrViewTableColWidth"
+ type TBazaarType = "templates" | "icons" | "widgets" | "themes" | "plugins"
+ type TCardType = "doc" | "notebook" | "all"
+ type TEventBus = "ws-main" | "sync-start" | "sync-end" | "sync-fail" |
+@@ -81,7 +71,6 @@ type TEventBus = "ws-main" | "sync-start" | "sync-end" | "sync-fail" |
+     "destroy-protyle" |
+     "lock-screen" |
+     "mobile-keyboard-show" | "mobile-keyboard-hide"
+-type TAVView = "table" | "gallery"
+ type TAVCol =
+     "text"
+     | "date"
+@@ -140,11 +129,8 @@ interface CSSStyleDeclarationElectron extends CSSStyleDeclaration {
+ }
+ 
+ interface Window {
+-    DOMPurify: {
+-        sanitize(dirty: string): string;
+-    };
+     echarts: {
+-        init(element: Element, theme?: string, options?: {
++        init(element: HTMLElement, theme?: string, options?: {
+             width: number
+         }): {
+             setOption(option: any): void;
+@@ -260,14 +246,7 @@ interface Window {
+ 
+     openFileByURL(URL: string): boolean;
+ 
+-    destroyTheme(): Promise<void>;;
+-}
+-
+-interface IClipboardData {
+-    textHTML?: string,
+-    textPlain?: string,
+-    siyuanHTML?: string,
+-    files?: File[],
++    destroyTheme(): Promise<void>;
+ }
+ 
+ interface IRefDefs {
+@@ -426,118 +405,6 @@ interface IEmoji {
      items: IEmojiItem[]
  }
  
@@ -2632,7 +2690,98 @@ index 94829a372..284e5e3c9 100644
  interface INotebook {
      name: string;
      id: string;
-@@ -1149,4 +1037,4 @@ interface IAVCellRollupValue {
+@@ -659,7 +526,6 @@ interface IOperation {
+     deckID?: string // add/removeFlashcards 专享
+     blockIDs?: string[] // add/removeFlashcards 专享
+     removeDest?: boolean // removeAttrViewCol 专享
+-    layout?: string // addAttrViewView 专享
+ }
+ 
+ interface IOperationSrcs {
+@@ -947,9 +813,9 @@ interface IBazaarItem {
+ interface IAV {
+     id: string;
+     name: string;
+-    view: IAVTable | IAVGallery;
++    view: IAVTable;
+     viewID: string;
+-    viewType: TAVView;
++    viewType: string;
+     views: IAVView[];
+ }
+ 
+@@ -957,34 +823,19 @@ interface IAVView {
+     name: string;
+     desc: string;
+     id: string;
+-    type: TAVView;
++    type: string;
+     icon: string;
+     hideAttrViewName: boolean;
+     pageSize: number;
+-    showIcon: boolean;
+-    wrapField: boolean;
+-    filters: IAVFilter[],
+-    sorts: IAVSort[],
+-    groups: IAVView[]
+-    group: IAVGroup
+ }
+ 
+ interface IAVTable extends IAVView {
+     columns: IAVColumn[],
++    filters: IAVFilter[],
++    sorts: IAVSort[],
+     rows: IAVRow[],
+     rowCount: number,
+-}
+-
+-interface IAVGallery extends IAVView {
+-    coverFrom: number;    // 0：无，1：内容图，2：资源字段，3：内容块
+-    coverFromAssetKeyID?: string;
+-    cardSize: number;   // 0：小卡片，1：中卡片，2：大卡片
+-    cardAspectRatio: number;
+-    fitImage: boolean;
+-    cards: IAVGalleryItem[],
+-    desc: string
+-    fields: IAVColumn[]
+-    cardCount: number,
++    pageSize: number,
+ }
+ 
+ interface IAVFilter {
+@@ -1001,17 +852,6 @@ interface relativeDate {
+     direction: number;   // 方向：-1: 前、0: 现在、1: 后
+ }
+ 
+-interface IAVGroup {
+-    field: string,
+-    method?: number //  0: 按值分组、1: 按数字范围分组、2: 按相对日期分组、3: 按天日期分组、4: 按周日期分组、5: 按月日期分组、6: 按年日期分组
+-    range?: {
+-        numStart: number // 数字范围起始值
+-        numEnd: number   // 数字范围结束值
+-        numStep: number  // 数字范围步长
+-    }
+-    order?: number  // 升序: 0(默认), 降序: 1, 手动排序: 2
+-}
+-
+ interface IAVSort {
+     column: string,
+     order: "ASC" | "DESC"
+@@ -1048,13 +888,6 @@ interface IAVRow {
+     cells: IAVCell[]
+ }
+ 
+-interface IAVGalleryItem {
+-    coverURL?: string;
+-    coverContent?: string;
+-    id: string;
+-    values: IAVCell[];
+-}
+-
+ interface IAVCell {
+     id: string,
+     color: string,
+@@ -1149,4 +982,4 @@ interface IAVCellRollupValue {
  interface IAVCalc {
      operator?: string,
      result?: IAVCellValue
