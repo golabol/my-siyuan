@@ -950,3 +950,15 @@ index ebd1002ac..c726c1f1e 100644
  		CloseButtonBehavior: 0,
  		HideStatusBar:       false,
  	}
+diff --git a/kernel/conf/system.go b/kernel/conf/system.go
+index db57659b4..58b0475a2 100644
+--- a/kernel/conf/system.go
++++ b/kernel/conf/system.go
+@@ -54,7 +54,6 @@ func NewSystem() *System {
+ 		Name:               util.GetDeviceName(),
+ 		KernelVersion:      util.Ver,
+ 		NetworkProxy:       &NetworkProxy{},
+-		DisableGoogleAnalytics: true,
+ 		DownloadInstallPkg: true,
+ 	}
+ }

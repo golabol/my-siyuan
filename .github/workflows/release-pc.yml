@@ -65,9 +65,9 @@ jobs:
           git clone --branch ${{ github.event.inputs.version }} --depth=1 https://github.com/siyuan-note/siyuan.git
           cd siyuan
 
-          git apply ${{ github.workspace }}/siyuan-note/patches/siyuan/icon.patch
-          git apply ${{ github.workspace }}/siyuan-note/patches/siyuan/kernel.patch
-          git apply ${{ github.workspace }}/siyuan-note/patches/siyuan/local-vip.patch
+          git apply --whitespace=fix ${{ github.workspace }}/siyuan-note/patches/siyuan/icon.patch
+          git apply --whitespace=fix ${{ github.workspace }}/siyuan-note/patches/siyuan/kernel.patch
+          git apply --whitespace=fix ${{ github.workspace }}/siyuan-note/patches/siyuan/local-vip.patch
 
           git status
 
