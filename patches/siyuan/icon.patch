@@ -88,7 +88,7 @@ index 5fe29ffaf..7b63ebd7a 100644
                      icon: "iconFiles",
                      hotkeyLangId: "fileTree",
 diff --git a/app/src/emoji/index.ts b/app/src/emoji/index.ts
-index df3f8baf7..d41ce59d9 100644
+index df3f8baf7..078386a93 100644
 --- a/app/src/emoji/index.ts
 +++ b/app/src/emoji/index.ts
 @@ -1,5 +1,5 @@
@@ -126,7 +126,7 @@ index df3f8baf7..d41ce59d9 100644
  };
  
 -export const filterEmoji = (key = "", max?: number) => {
-+export const filterEmoji = async (key = "", max?: number, triggered_by: "slash_hint" | "doc_notebook" = "doc_notebook") => {
++export const filterEmoji = async (key = "", max?: number, triggered_by: "slash_hint" | "doc_notebook" | "emoji_hint" = "doc_notebook") => {
      let html = "";
      const recentEmojis: IEmojiItem[] = [];
      if (key) {
@@ -149,7 +149,7 @@ index df3f8baf7..d41ce59d9 100644
      if (key) {
          customStore.sort((a, b) => {
              const aKeywords = a.keywords.split("/");
-@@ -164,6 +185,113 @@ ${unicode2Emoji(item.unicode, undefined, false, true)}</button>`;
+@@ -164,6 +185,110 @@ ${unicode2Emoji(item.unicode, undefined, false, true)}</button>`;
          });
          html = html + keyHTML + "</div>";
      }
@@ -176,8 +176,7 @@ index df3f8baf7..d41ce59d9 100644
 +                  onmouseover="this.style.border='0.5px solid var(--b3-theme-on-background)'"
 +                  onmouseout="this.style.border='none'"
 +                  aria-label="${getEmojiDesc(icon)}">
-+                  <img src="${urls.previewUrl}" 
-+                    style="width: 24px; height: 24px; object-fit: contain;"/>
++                  <img src="${urls.previewUrl}"/>
 +                </button>`;
 +                                }
 +                            });
@@ -207,8 +206,7 @@ index df3f8baf7..d41ce59d9 100644
 +                  onmouseover="this.style.border='0.5px solid var(--b3-theme-on-background)'"
 +                  onmouseout="this.style.border='none'"
 +                  aria-label="${getEmojiDesc(icon)}">
-+                  <img src="${urls.previewUrl}" 
-+                    style="width: 24px; height: 24px; object-fit: contain;"/>
++                  <img src="${urls.previewUrl}"/>
 +                </button>`;
 +                                }
 +                            });
@@ -244,8 +242,7 @@ index df3f8baf7..d41ce59d9 100644
 +                onmouseover="this.style.border='0.5px solid var(--b3-theme-on-background)'"
 +                onmouseout="this.style.border='none'"
 +                aria-label="${getEmojiDesc(icon)}">
-+                <img src="${urls.previewUrl}" 
-+                  style="width: 24px; height: 24px; object-fit: contain;"/>
++                <img src="${urls.previewUrl}"/>
 +              </button>`;
 +                            }
 +                        });
@@ -263,7 +260,7 @@ index df3f8baf7..d41ce59d9 100644
      let recentHTML = "";
      if (recentEmojis.length > 0) {
          recentHTML = `<div class="emojis__title" data-type="0">${window.siyuan.languages.recentEmoji}</div><div class="emojis__content">`;
-@@ -229,7 +357,7 @@ const renderEmojiContent = (previousIndex: string, previousContentElement: Eleme
+@@ -229,7 +354,7 @@ const renderEmojiContent = (previousIndex: string, previousContentElement: Eleme
      previousContentElement.removeAttribute("style");
  };
  
@@ -272,7 +269,7 @@ index df3f8baf7..d41ce59d9 100644
      if (type !== "av") {
          window.siyuan.menus.menu.remove();
      } else {
-@@ -258,6 +386,7 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -258,6 +383,7 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
          dynamicCurrentObj.content = dynamicCurrentUrl.get("content") || "SiYuan";
      }
  
@@ -280,7 +277,7 @@ index df3f8baf7..d41ce59d9 100644
      const dialog = new Dialog({
          disableAnimation: true,
          transparent: true,
-@@ -285,7 +414,7 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -285,7 +411,7 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  <span class="block__icon block__icon--show fn__flex-center ariaLabel" data-action="random" aria-label="${window.siyuan.languages.random}"><svg><use xlink:href="#iconRefresh"></use></svg></span>
                  <span class="fn__space"></span>
              </div>
@@ -289,7 +286,7 @@ index df3f8baf7..d41ce59d9 100644
              <div class="fn__flex">
                  ${[
              ["2b50", window.siyuan.languages.recentEmoji],
-@@ -382,25 +511,33 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -382,25 +508,33 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
      dialog.element.querySelector(".emojis__item").classList.add("emojis__item--current");
      const emojiSearchInputElement = dialog.element.querySelector('[data-type="tab-emoji"] .b3-text-field') as HTMLInputElement;
      const emojisContentElement = dialog.element.querySelector(".emojis__panel");
@@ -330,7 +327,7 @@ index df3f8baf7..d41ce59d9 100644
          if (emojiSearchInputElement.value) {
              emojisContentElement.nextElementSibling.classList.add("fn__none");
          } else {
-@@ -413,7 +550,7 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -413,7 +547,7 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
          }
          lazyLoadEmojiImg(dialog.element);
      });
@@ -339,7 +336,7 @@ index df3f8baf7..d41ce59d9 100644
          if (event.isComposing) {
              return;
          }
-@@ -425,7 +562,23 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -425,7 +559,23 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
              return;
          }
          if (event.key === "Enter") {
@@ -364,7 +361,7 @@ index df3f8baf7..d41ce59d9 100644
              if (type === "notebook") {
                  fetchPost("/api/notebook/setNotebookIcon", {
                      notebook: id,
-@@ -531,7 +684,7 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -531,7 +681,7 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
      lazyLoadEmoji(dialog.element);
      lazyLoadEmojiImg(dialog.element);
      // 不能使用 getEventName 否则 https://github.com/siyuan-note/siyuan/issues/5472
@@ -373,7 +370,7 @@ index df3f8baf7..d41ce59d9 100644
          let target = event.target as HTMLElement;
          while (target && target !== dialog.element) {
              if (target.classList.contains("emojis__type")) {
-@@ -575,6 +728,21 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
+@@ -575,6 +725,21 @@ export const openEmojiPanel = (id: string, type: "doc" | "notebook" | "av", posi
                  let unicode = "";
                  if (target.classList.contains("emojis__item")) {
                      unicode = target.getAttribute("data-unicode");
@@ -395,7 +392,7 @@ index df3f8baf7..d41ce59d9 100644
                      dialog.destroy();
                  } else if (target.classList.contains("emoji__dynamic-item")) {
                      unicode = target.getAttribute("src");
-@@ -757,3 +925,239 @@ export const reloadEmoji = () => {
+@@ -757,3 +922,239 @@ export const reloadEmoji = () => {
          });
      });
  };
@@ -687,7 +684,7 @@ index 07087e611..0f67be15d 100644
              icon: "iconRefresh",
              label: window.siyuan.languages.rebuildIndex,
 diff --git a/app/src/protyle/hint/index.ts b/app/src/protyle/hint/index.ts
-index 336b9aa21..945bfc999 100644
+index 336b9aa21..7e9a01819 100644
 --- a/app/src/protyle/hint/index.ts
 +++ b/app/src/protyle/hint/index.ts
 @@ -372,48 +372,55 @@ ${genHintItemHTML(item)}
@@ -716,7 +713,7 @@ index 336b9aa21..945bfc999 100644
 +
 +        const panelElement = this.element.querySelector(".emojis__panel");
 +        if (panelElement) {
-+            filterEmoji(value, 256, "slash_hint").then(emojiHTML => {
++            filterEmoji(value, 256, "emoji_hint").then(emojiHTML => {
 +                panelElement.innerHTML = emojiHTML;
 +                if (value) {
 +                    panelElement.nextElementSibling.classList.add("fn__none");
@@ -729,7 +726,7 @@ index 336b9aa21..945bfc999 100644
 -            // max-height：min(402px,40vh) 和 .protyle-hint 保持一致，否则 emoji 不显示底部导航
 -            this.element.innerHTML = `<div style="padding:0;max-height:min(402px,40vh);width:366px" class="emojis">
 -<div class="emojis__panel">${filterEmoji(value, 256)}</div>
-+            filterEmoji(value, 256, "slash_hint").then(emojiHTML => {
++            filterEmoji(value, 256, "emoji_hint").then(emojiHTML => {
 +                // max-height：min(402px,40vh) 和 .protyle-hint 保持一致，否则 emoji 不显示底部导航
 +                this.element.innerHTML = `<div style="padding:0;max-height:min(402px,40vh);width:366px" class="emojis">
 +<div class="emojis__panel">${emojiHTML}</div>
