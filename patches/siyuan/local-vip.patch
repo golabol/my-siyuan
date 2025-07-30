@@ -1,5 +1,5 @@
 diff --git a/kernel/api/setting.go b/kernel/api/setting.go
-index e5765d64a..e56e9efa5 100644
+index 56d642cd4..54345aeaf 100644
 --- a/kernel/api/setting.go
 +++ b/kernel/api/setting.go
 @@ -593,6 +593,28 @@ func getPublish(c *gin.Context) {
